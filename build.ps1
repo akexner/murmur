@@ -13,7 +13,7 @@ New-Item -ItemType Directory -Force "$Work\assets" | Out-Null
   --paths "$root" `
   --add-data "$root\murmur\ui;murmur\ui" `
   --collect-all faster_whisper --collect-all ctranslate2 --collect-all onnxruntime `
-  --collect-all tokenizers --collect-all av --collect-all webview `
+  --collect-all tokenizers --collect-all av `
   --hidden-import pystray._win32 `
   "$root\murmur\__main__.py"
 if (Test-Path "$Work\Murmur-Windows.zip") { Remove-Item "$Work\Murmur-Windows.zip" }

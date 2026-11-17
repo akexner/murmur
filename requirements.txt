@@ -4,5 +4,4 @@ numpy
 keyboard
 pystray
 pillow
-pywebview
 pyinstaller

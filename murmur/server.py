@@ -60,6 +60,12 @@ def make_server(ctl):
             if method == "GET" and p == "/":
                 html = open(paths.resource("ui", "index.html"), encoding="utf-8").read()
                 return self._send(200, html.replace("__TOKEN__", token).encode(), "text/html; charset=utf-8")
+            if method == "GET" and p == "/favicon.png":
+                import io
+                from . import mascot
+                buf = io.BytesIO()
+                mascot.draw(64).save(buf, "PNG")
+                return self._send(200, buf.getvalue(), "image/png")
             if not self._authed(q):
                 return self._send(403, {"error": "forbidden"})
             try:

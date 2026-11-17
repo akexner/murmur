@@ -11,6 +11,7 @@ from PIL import ImageDraw
 from . import __version__, mascot, paths
 from .controller import Controller
 from .server import make_server
+from .uiwindow import UiWindow
 
 
 def _single_instance():
@@ -34,19 +35,10 @@ def main():
     srv, token = make_server(ctl)
     url = f"http://127.0.0.1:{srv.server_port}/"
     quitting = threading.Event()
-    window = {"w": None}
+    ui = UiWindow(url)
 
     def show_ui(*_):
-        w = window["w"]
-        if w is not None:
-            try:
-                w.show()
-                w.restore()
-            except Exception:
-                pass
-        else:
-            import webbrowser
-            webbrowser.open(url)
+        ui.open()
 
     ctl.show_ui = show_ui
 
@@ -78,14 +70,6 @@ def main():
             tray.stop()
         except Exception:
             pass
-        w = window["w"]
-        if w is not None:
-            try:
-                w.destroy()
-            except Exception:
-                pass
-        else:
-            os._exit(0)
 
     def quit_app(icon, item):
         do_quit()
@@ -127,35 +111,12 @@ def main():
     # ---- window ----
     first = not ctl.cfg["first_run_done"]
     show_now = (first or "--show" in sys.argv) and not background
-    try:
-        import webview
-        w = webview.create_window("Murmur", f"{url}?t={token}", width=980, height=720,
-                                  min_size=(760, 560), hidden=not show_now)
-        window["w"] = w
-
-        def on_closing():
-            if quitting.is_set():
-                return True
-            w.hide()          # keep running in the tray
-            return False
-
-        w.events.closing += on_closing
-        if first:
-            ctl.cfg.update({"first_run_done": True})
-        logging.info("Murmur %s started (pid %s, window shown: %s)", __version__, os.getpid(), show_now)
-        webview.start()
-        logging.warning("window layer ended (quitting=%s)", quitting.is_set())
-    except Exception:
-        logging.exception("webview unavailable, falling back to browser")
-        import webbrowser
-        window["w"] = None
-        if show_now:
-            webbrowser.open(f"{url}?t={token}")
-    if not quitting.is_set():
-        # The window system ended on its own (for example a web-view crash). Dictation, hotkey and tray must
-        # keep working, so stay alive; "Open Murmur" then opens the settings page in the browser instead.
-        window["w"] = None
-        logging.warning("keeping Murmur alive in the tray without its own window")
-        quitting.wait()
+    if first:
+        ctl.cfg.update({"first_run_done": True})
+    logging.info("Murmur %s started (pid %s, window shown: %s)", __version__, os.getpid(), show_now)
+    if show_now:
+        ui.open()
+    quitting.wait()                 # the tray and hotkey threads do the work; "Quit" ends this
     logging.info("Murmur exiting normally")
+    ui.close()
     os._exit(0)
