@@ -12,6 +12,7 @@ Speech recognition runs **locally on your PC** with open-source Whisper ([faster
 - Custom dictionary (names, jargon) and replacements; voice commands ("new line", "new paragraph" / "neue Zeile", "neuer Absatz"); filler-word removal
 - **Audio is never lost:** recordings stream to disk while you speak; interrupted ones are recovered on next launch; failed transcriptions keep their audio with a retry button; deleting moves clips to "Recently deleted" for 14 days; starred clips never expire
 - **Offline / office mode:** the app itself refuses every non-local network connection, model downloads are disabled, models are imported from a folder, USB stick or network drive
+- **Optional text polish with a local [Ollama](https://ollama.com) model** (off by default): tidies punctuation and wording, keeps your line breaks, talks only to `127.0.0.1`, and falls back to your original text on any problem
 - Models: Tiny, Base, Small (default), Medium, Turbo, downloaded once
 
 ## Install (Windows 10/11)
@@ -50,6 +51,7 @@ Die Spracherkennung läuft **lokal auf deinem PC** mit Open-Source-Whisper (fast
 - Eigenes Wörterbuch (Namen, Fachbegriffe), Ersetzungen, Sprachbefehle („neue Zeile“, „neuer Absatz“), Füllwörter entfernen
 - **Audio geht nicht verloren:** Aufnahmen werden schon beim Sprechen auf die Platte geschrieben; unterbrochene werden beim nächsten Start wiederhergestellt; bei fehlgeschlagener Transkription bleibt das Audio mit „Neu transkribieren“-Knopf erhalten; Löschen verschiebt Clips 14 Tage nach „Zuletzt gelöscht“; mit Stern markierte Clips laufen nie ab
 - **Offline-/Kanzlei-Modus:** Die App verweigert selbst jede nicht-lokale Netzwerkverbindung, Modell-Downloads sind aus, Modelle kommen per Import aus Ordner, USB-Stick oder Netzlaufwerk
+- **Optionale Textglättung mit einem lokalen [Ollama](https://ollama.com)-Modell** (standardmäßig aus): glättet Zeichensetzung und Formulierung, behält deine Zeilenumbrüche, spricht nur mit `127.0.0.1` und nutzt bei jedem Problem deinen Originaltext
 - Modelle: Tiny, Base, Small (Standard), Medium, Turbo, einmalig geladen
 
 ## Installation (Windows 10/11)

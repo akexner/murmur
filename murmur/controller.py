@@ -6,7 +6,7 @@ import sys
 import threading
 import time
 
-from . import i18n, models, netguard, paster, paths, postprocess, recorder
+from . import cleanup, i18n, models, netguard, paster, paths, postprocess, recorder
 from .config import Config
 from .hotkeys import HotkeyManager
 from .overlay import Overlay
@@ -150,6 +150,8 @@ class Controller:
         try:
             raw, lang = self.tr.transcribe(row["path"], cfg["model"], cfg["language"], cfg["terms"])
             final = postprocess.apply(raw, cfg)
+            if final and cfg["llm_cleanup"] and cfg["llm_model"]:
+                final = cleanup.polish(final, cfg["llm_model"])
         except Exception as e:
             log.exception("transcription failed")
             self.store.update(rid, status="failed", error=f"{type(e).__name__}: {e}")

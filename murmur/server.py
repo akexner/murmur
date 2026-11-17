@@ -10,7 +10,7 @@ from urllib.parse import parse_qs, urlparse
 
 import sounddevice as sd
 
-from . import models, netguard, paths
+from . import cleanup, models, netguard, paths
 
 
 def make_server(ctl):
@@ -75,6 +75,8 @@ def make_server(ctl):
                     "attention": c.store.attention_count(), "recovered": c.recovered,
                     "lang": c.lang, "blocked": netguard.blocked, "models_root": models.root(),
                     "models": models.MODELS})
+            if method == "GET" and p == "/api/ollama/models":
+                return self._send(200, cleanup.models())
             if method == "GET" and p == "/api/devices":
                 devs = [{"id": i, "name": d["name"]} for i, d in enumerate(sd.query_devices())
                         if d["max_input_channels"] > 0 and d["hostapi"] == sd.default.hostapi]

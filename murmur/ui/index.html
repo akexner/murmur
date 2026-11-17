@@ -217,6 +217,13 @@ label.sw{display:flex;gap:10px;align-items:center;padding:6px 0}
     <div class="row"><select id="ui_language"><option value="auto">Automatic (Windows)</option><option value="en">English</option><option value="de">Deutsch</option></select></div>
   </div>
   <div class="card">
+    <h3>Text polish (optional, local AI)</h3>
+    <p class="muted" style="margin-top:0">Tidies punctuation and wording with a model running in your own Ollama on this computer. Nothing leaves your PC; if anything goes wrong, your original text is used.</p>
+    <label class="sw"><input type="checkbox" id="llm_cleanup"> Polish dictated text with a local model</label>
+    <div class="row"><select id="llm_model"></select><button class="btn" id="llmRefresh">Refresh</button></div>
+    <p class="muted" style="font-size:13px;margin-bottom:0" id="llmMsg"></p>
+  </div>
+  <div class="card">
     <h3>Offline / office mode</h3>
     <p class="muted" style="margin-top:0">Blocks every network connection this app tries to make to anything except your own computer. Model downloads are switched off; import models from a folder or network drive instead.</p>
     <label class="sw"><input type="checkbox" id="offline_mode"> Offline mode (block all non-local connections)</label>
@@ -285,6 +292,11 @@ const DE={
 "Remove “um”, “uh”, “äh”":"„um“, „uh“, „äh“ entfernen","Voice commands (“new line”, “new paragraph”)":"Sprachbefehle („neue Zeile“, „neuer Absatz“)",
 "Little start/stop beeps":"Kleine Start-/Stopp-Pieptöne","Pasting":"Einfügen","Paste text where my cursor is":"Text an der Cursorposition einfügen",
 "Put my previous clipboard back afterwards":"Vorherige Zwischenablage danach wiederherstellen","Start Murmur with Windows":"Murmur mit Windows starten",
+"Text polish (optional, local AI)":"Textglättung (optional, lokale KI)",
+"Tidies punctuation and wording with a model running in your own Ollama on this computer. Nothing leaves your PC; if anything goes wrong, your original text is used.":"Glättet Zeichensetzung und Formulierung mit einem Modell in deinem eigenen Ollama auf diesem Computer. Nichts verlässt deinen PC; geht etwas schief, wird dein Originaltext verwendet.",
+"Polish dictated text with a local model":"Diktierten Text mit einem lokalen Modell glätten","Refresh":"Aktualisieren",
+"Ollama not found. Install Ollama and pull a model (for example mistral-small or qwen3:14b), then press Refresh.":"Ollama nicht gefunden. Installiere Ollama und lade ein Modell (z. B. mistral-small oder qwen3:14b), dann auf „Aktualisieren“ klicken.",
+"Local models found:":"Lokale Modelle gefunden:","No model selected":"Kein Modell gewählt",
 "Interface language":"Oberflächensprache","Automatic (Windows)":"Automatisch (Windows)",
 "Offline / office mode":"Offline-/Kanzlei-Modus",
 "Blocks every network connection this app tries to make to anything except your own computer. Model downloads are switched off; import models from a folder or network drive instead.":"Blockiert jede Netzwerkverbindung dieser App zu allem außer deinem eigenen Computer. Modell-Downloads sind abgeschaltet; importiere Modelle stattdessen aus einem Ordner oder Netzlaufwerk.",
@@ -414,11 +426,20 @@ function syncSettings(){
       $("#importMsg").textContent=s.download.error?s.download.error:tr("Import finished. Choose the model on the Home screen."); } },700); };
   $("#modelsDirSave").onclick=async()=>{ await post("/api/config",{models_dir:$("#modelsDir").value.trim()}); };
   ["mode","language","retention_days","ui_language"].forEach(k=>{ const el=$("#"+k); el.value=String(c[k]); el.onchange=()=>post("/api/config",{[k]:k==="retention_days"?+el.value:el.value}); });
-  ["filler_removal","voice_commands","sounds","auto_paste","restore_clipboard","autostart","offline_mode"].forEach(k=>{
+  ["filler_removal","voice_commands","sounds","auto_paste","restore_clipboard","autostart","offline_mode","llm_cleanup"].forEach(k=>{
     const el=$("#"+k); el.checked=!!c[k]; el.onchange=()=>post("/api/config",{[k]:el.checked}); });
   renderDict();
 }
+async function loadLlm(){
+  const ms=await api("/api/ollama/models"), sel=$("#llm_model");
+  sel.innerHTML=`<option value="">${tr("No model selected")}</option>`+ms.map(m=>`<option value="${esc(m)}">${esc(m)}</option>`).join("");
+  sel.value=S.config.llm_model||""; if(sel.value!==(S.config.llm_model||"")) sel.value="";
+  sel.onchange=()=>post("/api/config",{llm_model:sel.value});
+  $("#llmMsg").textContent=ms.length?`${tr("Local models found:")} ${ms.length}`:tr("Ollama not found. Install Ollama and pull a model (for example mistral-small or qwen3:14b), then press Refresh.");
+}
+$("#llmRefresh").onclick=loadLlm;
 async function loadDevices(){
+  loadLlm();
   const devs=await api("/api/devices"), sel=$("#mic");
   sel.innerHTML='<option value="">System default</option>'+devs.map(d=>`<option value="${d.id}">${esc(d.name)}</option>`).join("");
   sel.value=S.config.mic==null?"":String(S.config.mic);

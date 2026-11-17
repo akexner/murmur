@@ -19,7 +19,9 @@ DEFAULTS = {
     "retention_days": 30,        # 0 = keep audio forever. Starred clips are never expired.
     "terms": [],                 # words to bias recognition towards (names, jargon)
     "replacements": [],          # [{"from": "...", "to": "..."}]
-    "offline_mode": False,       # Kanzlei mode: refuse every non-local network connection
+    "llm_cleanup": False,        # optional polish with a local Ollama model (127.0.0.1 only)
+    "llm_model": "",
+    "offline_mode": False,      # Kanzlei mode: refuse every non-local network connection
     "models_dir": "",            # custom model folder (e.g. a network share); "" = default
     "ui_language": "auto",       # "auto" (follow Windows), "de" or "en"
     "first_run_done": False,
