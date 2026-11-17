@@ -1,0 +1,8 @@
+faster-whisper
+sounddevice
+numpy
+keyboard
+pystray
+pillow
+pywebview
+pyinstaller

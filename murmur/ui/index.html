@@ -1,0 +1,482 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Murmur</title>
+<style>
+:root{
+  --bg:#FFF8F0; --card:#FFFFFF; --ink:#2B2438; --muted:#7B7289; --line:#EFE6DA;
+  --accent:#8B7CFF; --accent-ink:#fff; --soft:#F1EDFF; --good:#3CB88A; --bad:#E5566D; --warn:#E8A33B;
+  --body:#B9A9FF; --body-d:#9D8CFF; --belly:#F4EFFF; --beak:#FFA94D; --cheek:#FF9EB5;
+}
+@media (prefers-color-scheme: dark){
+  :root{ --bg:#1B1726; --card:#262033; --ink:#F2EEFB; --muted:#A79FB8; --line:#352D45; --soft:#2F2745; }
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--ink);font:15px/1.45 "Segoe UI Variable","Segoe UI",system-ui,sans-serif;display:flex}
+button{font:inherit;color:inherit;cursor:pointer}
+nav{width:200px;padding:20px 14px;display:flex;flex-direction:column;gap:6px;border-right:1px solid var(--line);flex:none}
+.brand{display:flex;align-items:center;gap:8px;font-weight:700;font-size:20px;letter-spacing:-.02em;padding:0 8px 14px}
+.brand .puff{width:38px;height:38px}
+nav button.tab{all:unset;cursor:pointer;padding:9px 12px;border-radius:12px;display:flex;gap:10px;align-items:center;color:var(--muted);font-weight:600}
+nav button.tab:hover{background:var(--soft)}
+nav button.tab.on{background:var(--soft);color:var(--ink)}
+nav .badge{margin-left:auto;background:var(--warn);color:#fff;border-radius:99px;font-size:11px;padding:1px 7px}
+nav .spacer{flex:1}
+nav .foot{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:12px;padding:8px}
+nav .foot .puff{width:30px;height:30px}
+main{flex:1;overflow:auto;padding:28px 34px 60px}
+h1{font-size:26px;margin:0 0 4px;letter-spacing:-.02em}
+.sub{color:var(--muted);margin:0 0 22px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px 20px;margin-bottom:16px}
+.card h3{margin:0 0 10px;font-size:15px}
+.row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.row.sp{justify-content:space-between}
+.btn{background:var(--soft);border:1px solid var(--line);border-radius:12px;padding:7px 14px;font-weight:600}
+.btn:hover{filter:brightness(.97)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:transparent}
+.btn.sm{padding:4px 10px;font-size:13px;border-radius:9px}
+.btn.danger{color:var(--bad)}
+select,input[type=text],input[type=search]{font:inherit;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:10px;padding:7px 10px;min-width:180px}
+kbd{background:var(--soft);border:1px solid var(--line);border-bottom-width:2px;border-radius:8px;padding:2px 9px;font:600 14px ui-monospace,Consolas,monospace}
+.muted{color:var(--muted)}
+.hero{display:flex;align-items:center;gap:26px;padding:24px 26px;background:linear-gradient(135deg,var(--soft),var(--card));}
+.hero .puff{width:150px;height:150px;flex:none}
+.hero h2{margin:0 0 6px;font-size:22px}
+.pill{display:inline-block;border-radius:99px;padding:2px 10px;font-size:12px;font-weight:700;background:var(--soft)}
+.pill.ok{background:#DDF5EA;color:#217A59}.pill.bad{background:#FFE1E6;color:#B3293F}.pill.warn{background:#FFF0D2;color:#8A5A0B}.pill.star{background:#FFF0D2;color:#8A5A0B}
+.models{display:grid;gap:8px}
+.model{display:flex;align-items:center;gap:12px;padding:10px 12px;border:1px solid var(--line);border-radius:14px}
+.model.on{border-color:var(--accent);background:var(--soft)}
+.model .nm{font-weight:700;min-width:70px}
+.bar{height:6px;background:var(--line);border-radius:9px;overflow:hidden;min-width:120px;flex:1}
+.bar>i{display:block;height:100%;background:var(--accent);width:0;transition:width .4s}
+.item{padding:14px 16px;border:1px solid var(--line);background:var(--card);border-radius:16px;margin-bottom:10px}
+.item .meta{color:var(--muted);font-size:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:6px}
+.item .txt{white-space:pre-wrap;word-break:break-word}
+.item .acts{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;align-items:center}
+.item audio{height:30px;max-width:260px}
+.empty{text-align:center;padding:40px 10px;color:var(--muted)}
+.empty .puff{width:120px;height:120px;margin-bottom:8px}
+.tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.tag{background:var(--soft);border-radius:99px;padding:3px 6px 3px 12px;display:flex;gap:6px;align-items:center}
+.tag button{all:unset;cursor:pointer;color:var(--muted);padding:0 6px}
+.rep{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+.rep input{min-width:0;flex:1}
+label.sw{display:flex;gap:10px;align-items:center;padding:6px 0}
+.banner{background:#FFF0D2;color:#6B4607;border-radius:14px;padding:10px 14px;margin-bottom:16px;display:flex;gap:10px;align-items:center}
+.hidden{display:none!important}
+.tip{display:flex;gap:10px;align-items:flex-start;color:var(--muted);font-size:13px}
+.tip .puff{width:34px;height:34px;flex:none}
+.bubble{background:var(--soft);border-radius:14px;padding:8px 12px;font-size:13px;color:var(--ink)}
+
+/* ---------- Murmi ---------- */
+.puff{display:inline-block;overflow:visible}
+.puff *{transform-box:fill-box}
+.puff .all{transform-origin:50% 100%;animation:breathe 3.6s ease-in-out infinite}
+.puff .tuft{transform-origin:50% 100%;animation:tuft 4.5s ease-in-out infinite}
+.puff .wing{animation:flap 4.5s ease-in-out infinite}
+.puff .wing.r{animation-delay:.4s;transform-origin:30% 20%}
+.puff .wing.l{transform-origin:70% 20%}
+.puff .eye{transform-origin:50% 50%;animation:blink 4.8s infinite}
+.puff .eye.b{animation-delay:.03s}
+.puff .dots,.puff .waves,.puff .spark,.puff .xx{opacity:0}
+@keyframes breathe{0%,100%{transform:scale(1,1)}50%{transform:scale(1.025,.975)}}
+@keyframes tuft{0%,100%{transform:rotate(0)}50%{transform:rotate(-7deg)}}
+@keyframes flap{0%,88%,100%{transform:rotate(0)}93%{transform:rotate(-16deg)}}
+@keyframes blink{0%,94%,100%{transform:scaleY(1)}96.5%{transform:scaleY(.1)}}
+@keyframes hop{0%,100%{transform:translateY(0)}40%{transform:translateY(-8px)}}
+@keyframes look{0%,100%{transform:translateX(-2px)}50%{transform:translateX(2px)}}
+@keyframes dot{0%,100%{opacity:.25;transform:translateY(0)}50%{opacity:1;transform:translateY(-4px)}}
+@keyframes wave{0%{opacity:0;transform:scale(.8)}40%{opacity:.9}100%{opacity:0;transform:scale(1.25)}}
+@keyframes jig{0%,100%{transform:rotate(0)}25%{transform:rotate(10deg)}75%{transform:rotate(-10deg)}}
+@keyframes twinkle{0%,100%{opacity:0;transform:scale(.4)}50%{opacity:1;transform:scale(1)}}
+/* listening */
+.puff.listening .all{animation:hop .55s ease-in-out infinite}
+.puff.listening .tuft{animation:jig .35s ease-in-out infinite}
+.puff.listening .eye{animation:none;transform:scaleY(1.15)}
+.puff.listening .wing{animation:flap 1s ease-in-out infinite}
+.puff.listening .waves{opacity:1}
+.puff.listening .waves path{animation:wave 1.1s ease-out infinite;transform-origin:50% 50%}
+.puff.listening .waves path:nth-child(2){animation-delay:.35s}
+/* thinking */
+.puff.thinking .pupils{animation:look 1.2s ease-in-out infinite}
+.puff.thinking .dots{opacity:1}
+.puff.thinking .dots circle{animation:dot 1s ease-in-out infinite}
+.puff.thinking .dots circle:nth-child(2){animation-delay:.18s}
+.puff.thinking .dots circle:nth-child(3){animation-delay:.36s}
+/* happy / sleepy */
+.puff.happy .all{animation:hop .5s ease-in-out 2}
+.puff.happy .spark{opacity:1}
+.puff.happy .spark path{animation:twinkle 1.2s ease-in-out infinite}
+.puff.happy .spark path:nth-child(2){animation-delay:.5s}
+.puff.sleepy .eye{animation:none;transform:scaleY(.12)}
+.puff.sleepy .all{animation-duration:5.5s}
+@media (prefers-reduced-motion: reduce){.puff *{animation:none!important}}
+</style>
+</head>
+<body>
+<nav>
+  <div class="brand"><span data-murmi="main"></span> Murmur</div>
+  <button class="tab on" data-tab="home">🏠 Home</button>
+  <button class="tab" data-tab="history">🕘 History <span id="navBadge" class="badge hidden"></span></button>
+  <button class="tab" data-tab="dict">📖 Dictionary</button>
+  <button class="tab" data-tab="settings">⚙️ Settings</button>
+  <div class="spacer"></div>
+  <div class="foot"><span data-murmi="sleepy"></span><span>Murmi keeps watch while you work.</span></div>
+</nav>
+
+<main>
+<!-- HOME -->
+<section id="home">
+  <div class="card hero">
+    <span data-murmi="big"></span>
+    <div>
+      <h2 id="heroTitle">Ready when you are</h2>
+      <p class="muted" id="heroSub" style="margin:0 0 12px"></p>
+      <div class="row"><span class="pill" id="statePill">idle</span>
+        <button class="btn sm" id="pauseBtn">Pause dictation</button></div>
+    </div>
+  </div>
+  <div id="attention" class="banner hidden"><span>🪶</span><span id="attText"></span><button class="btn sm" id="attGo">Take a look</button></div>
+  <div class="card" id="modelCard">
+    <div class="row sp"><h3 style="margin:0">Speech model</h3><span class="muted" id="modelHint"></span></div>
+    <div class="models" id="models" style="margin-top:12px"></div>
+  </div>
+  <div class="card">
+    <h3>How to dictate</h3>
+    <div class="row"><span id="hkShow"></span><span class="muted" id="hkExplain"></span></div>
+    <div class="tip" style="margin-top:14px"><span data-murmi="small"></span><div class="bubble">Click into any text box, hold the keys, say your thing, let go. Your words appear where the cursor is. Every recording is saved safely first, so nothing gets lost if something goes wrong.</div></div>
+  </div>
+  <div class="card">
+    <h3>Try it here</h3>
+    <textarea id="playground" rows="3" placeholder="Click here, then hold your hotkey and speak…" style="width:100%;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:10px"></textarea>
+  </div>
+</section>
+
+<!-- HISTORY -->
+<section id="history" class="hidden">
+  <h1>History</h1><p class="sub">Every recording is kept safely until you decide otherwise. Starred clips never expire.</p>
+  <div class="row" style="margin-bottom:14px">
+    <input type="search" id="q" placeholder="Search your words…" style="flex:1">
+    <select id="hfilter"><option value="all">All</option><option value="attention">Needs attention</option><option value="trash">Recently deleted</option></select>
+    <button class="btn" id="openFolder">Open folder</button>
+  </div>
+  <div id="hlist"></div>
+</section>
+
+<!-- DICTIONARY -->
+<section id="dict" class="hidden">
+  <h1>Dictionary</h1><p class="sub">Teach Murmur your names and jargon.</p>
+  <div class="card">
+    <h3>Words to listen for</h3>
+    <p class="muted" style="margin-top:0">Names, clients, technical terms. This nudges recognition towards them.</p>
+    <div class="tags" id="terms"></div>
+    <div class="row"><input type="text" id="termIn" placeholder="e.g. Klomp, Umsatzsteuer, Whisper"><button class="btn" id="termAdd">Add</button></div>
+  </div>
+  <div class="card">
+    <h3>Always replace</h3>
+    <p class="muted" style="margin-top:0">If Murmur writes something you'd rather it didn't, fix it for good.</p>
+    <div id="reps"></div>
+    <button class="btn" id="repAdd">+ Add replacement</button>
+  </div>
+  <div class="card">
+    <h3>Voice commands</h3>
+    <p class="muted" style="margin:0">Say “new line” or “new paragraph” (also “neue Zeile”, “neuer Absatz”) and Murmur types the break.</p>
+  </div>
+</section>
+
+<!-- SETTINGS -->
+<section id="settings" class="hidden">
+  <h1>Settings</h1><p class="sub">Everything runs on this computer. No account, no cloud.</p>
+  <div class="card">
+    <h3>Hotkey</h3>
+    <div class="row"><span id="hkShow2"></span><button class="btn" id="hkSet">Change…</button><span class="muted" id="hkMsg"></span></div>
+    <div class="row" style="margin-top:12px"><span>Mode</span>
+      <select id="mode"><option value="hold">Hold to talk</option><option value="toggle">Press to start, press again to stop</option></select></div>
+  </div>
+  <div class="card">
+    <h3>Voice</h3>
+    <div class="row"><span style="width:90px">Language</span>
+      <select id="language"><option value="auto">Auto-detect</option><option value="en">English</option><option value="de">Deutsch</option><option value="fr">Français</option><option value="es">Español</option><option value="it">Italiano</option><option value="nl">Nederlands</option><option value="pt">Português</option><option value="pl">Polski</option><option value="tr">Türkçe</option><option value="ja">日本語</option><option value="zh">中文</option></select></div>
+    <div class="row" style="margin-top:10px"><span style="width:90px">Microphone</span><select id="mic"></select></div>
+    <label class="sw" style="margin-top:6px"><input type="checkbox" id="filler_removal"> Remove “um”, “uh”, “äh”</label>
+    <label class="sw"><input type="checkbox" id="voice_commands"> Voice commands (“new line”, “new paragraph”)</label>
+    <label class="sw"><input type="checkbox" id="sounds"> Little start/stop beeps</label>
+  </div>
+  <div class="card">
+    <h3>Pasting</h3>
+    <label class="sw"><input type="checkbox" id="auto_paste"> Paste text where my cursor is</label>
+    <label class="sw"><input type="checkbox" id="restore_clipboard"> Put my previous clipboard back afterwards</label>
+    <label class="sw"><input type="checkbox" id="autostart"> Start Murmur with Windows</label>
+  </div>
+  <div class="card">
+    <h3>Interface language</h3>
+    <div class="row"><select id="ui_language"><option value="auto">Automatic (Windows)</option><option value="en">English</option><option value="de">Deutsch</option></select></div>
+  </div>
+  <div class="card">
+    <h3>Offline / office mode</h3>
+    <p class="muted" style="margin-top:0">Blocks every network connection this app tries to make to anything except your own computer. Model downloads are switched off; import models from a folder or network drive instead.</p>
+    <label class="sw"><input type="checkbox" id="offline_mode"> Offline mode (block all non-local connections)</label>
+    <div class="muted" id="offlineInfo" style="font-size:13px"></div>
+    <div class="row" style="margin-top:12px"><input type="text" id="importPath" placeholder="Folder containing a model, e.g. \\server\share\murmur-models" style="flex:1"><button class="btn" id="importBtn">Import model</button></div>
+    <div class="row" style="margin-top:10px"><input type="text" id="modelsDir" placeholder="Or use models directly from this folder (optional)" style="flex:1"><button class="btn" id="modelsDirSave">Use folder</button></div>
+    <p class="muted" style="font-size:13px;margin-bottom:0" id="importMsg">Tip: download a model once on any PC, then copy the folder %APPDATA%\Murmur\models to a USB stick or network drive.</p>
+  </div>
+  <div class="card">
+    <h3>Audio safety</h3>
+    <p class="muted" style="margin-top:0">Audio is written to disk while you speak and the file stays valid even if the app crashes. Interrupted recordings are recovered on the next launch and transcribed into History. Murmur never deletes audio that failed to transcribe.</p>
+    <div class="row"><span>Keep finished audio</span>
+      <select id="retention_days"><option value="0">Forever</option><option value="90">90 days</option><option value="30">30 days</option><option value="7">7 days</option><option value="1">1 day</option></select></div>
+    <p class="muted" style="margin-bottom:0;font-size:13px">After that, audio moves to “Recently deleted” for 14 more days before it's gone. The text stays in History. Star a clip to keep its audio forever.</p>
+  </div>
+  <div class="card tip"><span data-murmi="small"></span><div>Murmur v1.0 · free, open-source models by OpenAI Whisper, run locally with faster-whisper.</div></div>
+</section>
+</main>
+
+<script>
+const TOKEN="__TOKEN__";
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+async function api(path,opts={}){
+  const r=await fetch(path,{method:opts.body?"POST":(opts.method||"GET"),headers:{"X-Token":TOKEN,"Content-Type":"application/json"},body:opts.body?JSON.stringify(opts.body):undefined});
+  return r.json();
+}
+const post=(p,b={})=>api(p,{body:b});
+const esc=s=>(s||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+/* ---------- language (English text is the key; German is looked up) ---------- */
+const DE={
+"🏠 Home":"🏠 Start","🕘 History":"🕘 Verlauf","📖 Dictionary":"📖 Wörterbuch","⚙️ Settings":"⚙️ Einstellungen",
+"Murmi keeps watch while you work.":"Murmi hält Wache, während du arbeitest.",
+"Ready when you are":"Bereit, wenn du es bist","Hold your hotkey and talk. I'll type it for you.":"Halte deinen Hotkey und sprich. Ich tippe es für dich.",
+"I'm listening…":"Ich höre zu…","Keep talking, release when you're done.":"Sprich weiter, lass los, wenn du fertig bist.",
+"Turning that into words…":"Mache daraus Worte…","Just a moment.":"Einen Moment.",
+"Taking a nap":"Mache ein Nickerchen","Dictation is paused. Wake me up any time.":"Diktat ist pausiert. Weck mich jederzeit auf.",
+"idle":"bereit","listening":"hört zu","thinking":"denkt nach","paused":"pausiert",
+"Pause dictation":"Diktat pausieren","Resume dictation":"Diktat fortsetzen","Take a look":"Ansehen",
+"Speech model":"Sprachmodell","Pick one to download (one time only)":"Wähle eines zum Herunterladen (nur einmal)",
+"Fastest, rough accuracy":"Am schnellsten, grobe Genauigkeit","Fast, decent":"Schnell, ordentlich","Great balance (recommended)":"Gute Balance (empfohlen)",
+"More accurate, slower":"Genauer, langsamer","Best accuracy, wants a fast PC":"Beste Genauigkeit, braucht einen schnellen PC",
+"In use":"In Benutzung","Use":"Nutzen","Download":"Herunterladen","Download failed":"Download fehlgeschlagen",
+"How to dictate":"So diktierst du","Hold to talk, release to paste":"Halten zum Sprechen, Loslassen zum Einfügen",
+"Press once to start, again to stop":"Einmal drücken zum Starten, nochmal zum Stoppen",
+"Click into any text box, hold the keys, say your thing, let go. Your words appear where the cursor is. Every recording is saved safely first, so nothing gets lost if something goes wrong.":"Klick in ein beliebiges Textfeld, halte die Tasten, sprich, lass los. Deine Worte erscheinen am Cursor. Jede Aufnahme wird zuerst sicher gespeichert, damit nichts verloren geht, falls etwas schiefgeht.",
+"Try it here":"Hier ausprobieren","Click here, then hold your hotkey and speak…":"Klick hierher, halte deinen Hotkey und sprich…",
+"History":"Verlauf","Every recording is kept safely until you decide otherwise. Starred clips never expire.":"Jede Aufnahme bleibt sicher gespeichert, bis du etwas anderes entscheidest. Mit Stern markierte Clips laufen nie ab.",
+"Search your words…":"Suche in deinen Worten…","All":"Alle","Needs attention":"Braucht Aufmerksamkeit","Recently deleted":"Zuletzt gelöscht","Open folder":"Ordner öffnen",
+"Copy":"Kopieren","Copied ✓":"Kopiert ✓","Transcribe":"Transkribieren","Re-transcribe":"Neu transkribieren","☆ Keep forever":"☆ Für immer behalten",
+"★ Unstar":"★ Stern entfernen","Delete":"Löschen","Restore":"Wiederherstellen","audio expired":"Audio abgelaufen","★ kept forever":"★ für immer behalten",
+"waiting":"wartet","transcribing":"transkribiert","failed, audio safe":"fehlgeschlagen, Audio sicher","no speech heard":"keine Sprache erkannt","interrupted":"unterbrochen",
+"Recovered after an interruption":"Nach Unterbrechung wiederhergestellt","Audio expired (text kept)":"Audio abgelaufen (Text behalten)",
+"Nothing in Recently deleted.":"Nichts in „Zuletzt gelöscht“.","All good. Nothing needs attention.":"Alles gut. Nichts braucht Aufmerksamkeit.",
+"No recordings yet. Hold your hotkey and say hi!":"Noch keine Aufnahmen. Halte deinen Hotkey und sag Hallo!","No text yet.":"Noch kein Text.",
+"Dictionary":"Wörterbuch","Teach Murmur your names and jargon.":"Bring Murmur deine Namen und Fachbegriffe bei.",
+"Words to listen for":"Wörter, auf die geachtet wird","Names, clients, technical terms. This nudges recognition towards them.":"Namen, Mandanten, Fachbegriffe. Das lenkt die Erkennung in diese Richtung.",
+"Add":"Hinzufügen","e.g. Klomp, Umsatzsteuer, Whisper":"z. B. Klomp, Umsatzsteuer, Whisper","Nothing yet.":"Noch nichts.",
+"Always replace":"Immer ersetzen","If Murmur writes something you'd rather it didn't, fix it for good.":"Schreibt Murmur etwas, das du nicht willst, korrigiere es dauerhaft.",
+"+ Add replacement":"+ Ersetzung hinzufügen","when I say…":"wenn ich sage…","write…":"schreibe…","Voice commands":"Sprachbefehle",
+"Say “new line” or “new paragraph” (also “neue Zeile”, “neuer Absatz”) and Murmur types the break.":"Sag „neue Zeile“ oder „neuer Absatz“ (auch „new line“, „new paragraph“) und Murmur setzt den Umbruch.",
+"Settings":"Einstellungen","Everything runs on this computer. No account, no cloud.":"Alles läuft auf diesem Computer. Kein Konto, keine Cloud.",
+"Change…":"Ändern…","Mode":"Modus","Hold to talk":"Halten zum Sprechen","Press to start, press again to stop":"Drücken zum Starten, nochmal zum Stoppen",
+"Press and release your new key combination…":"Drücke und lass deine neue Tastenkombination los…","Saved!":"Gespeichert!","Nothing pressed.":"Nichts gedrückt.",
+"Voice":"Stimme","Language":"Sprache","Auto-detect":"Automatisch erkennen","Microphone":"Mikrofon","System default":"Systemstandard",
+"Remove “um”, “uh”, “äh”":"„um“, „uh“, „äh“ entfernen","Voice commands (“new line”, “new paragraph”)":"Sprachbefehle („neue Zeile“, „neuer Absatz“)",
+"Little start/stop beeps":"Kleine Start-/Stopp-Pieptöne","Pasting":"Einfügen","Paste text where my cursor is":"Text an der Cursorposition einfügen",
+"Put my previous clipboard back afterwards":"Vorherige Zwischenablage danach wiederherstellen","Start Murmur with Windows":"Murmur mit Windows starten",
+"Interface language":"Oberflächensprache","Automatic (Windows)":"Automatisch (Windows)",
+"Offline / office mode":"Offline-/Kanzlei-Modus",
+"Blocks every network connection this app tries to make to anything except your own computer. Model downloads are switched off; import models from a folder or network drive instead.":"Blockiert jede Netzwerkverbindung dieser App zu allem außer deinem eigenen Computer. Modell-Downloads sind abgeschaltet; importiere Modelle stattdessen aus einem Ordner oder Netzlaufwerk.",
+"Offline mode (block all non-local connections)":"Offline-Modus (alle nicht-lokalen Verbindungen blockieren)",
+"Folder containing a model, e.g. \\\\server\\share\\murmur-models":"Ordner mit einem Modell, z. B. \\\\server\\freigabe\\murmur-modelle","Import model":"Modell importieren",
+"Or use models directly from this folder (optional)":"Oder Modelle direkt aus diesem Ordner nutzen (optional)","Use folder":"Ordner verwenden",
+"Tip: download a model once on any PC, then copy the folder %APPDATA%\\Murmur\\models to a USB stick or network drive.":"Tipp: Lade ein Modell einmal auf einem beliebigen PC herunter und kopiere dann den Ordner %APPDATA%\\Murmur\\models auf einen USB-Stick oder ein Netzlaufwerk.",
+"Importing…":"Importiere…","Import finished. Choose the model on the Home screen.":"Import abgeschlossen. Wähle das Modell auf der Startseite.",
+"Audio safety":"Audio-Sicherheit",
+"Audio is written to disk while you speak and the file stays valid even if the app crashes. Interrupted recordings are recovered on the next launch and transcribed into History. Murmur never deletes audio that failed to transcribe.":"Audio wird beim Sprechen auf die Festplatte geschrieben und bleibt auch bei einem Absturz gültig. Unterbrochene Aufnahmen werden beim nächsten Start wiederhergestellt und im Verlauf transkribiert. Murmur löscht nie Audio, dessen Transkription fehlgeschlagen ist.",
+"Keep finished audio":"Fertiges Audio behalten","Forever":"Für immer","90 days":"90 Tage","30 days":"30 Tage","7 days":"7 Tage","1 day":"1 Tag",
+"After that, audio moves to “Recently deleted” for 14 more days before it's gone. The text stays in History. Star a clip to keep its audio forever.":"Danach liegt das Audio noch 14 Tage unter „Zuletzt gelöscht“, bevor es weg ist. Der Text bleibt im Verlauf. Markiere einen Clip mit Stern, um sein Audio für immer zu behalten.",
+"Murmur v1.0 · free, open-source models by OpenAI Whisper, run locally with faster-whisper.":"Murmur v1.0 · kostenlose Open-Source-Modelle von OpenAI Whisper, lokal mit faster-whisper."
+};
+let LANG="en";
+function trNode(n){
+  if(n.nodeType===3){
+    const o=n.__o!==undefined?n.__o:n.nodeValue, k=o.trim();
+    if(DE[k]!==undefined){ n.__o=o; const want=LANG==="de"?o.replace(k,DE[k]):o; if(n.nodeValue!==want) n.nodeValue=want; }
+  } else if(n.nodeType===1 && n.tagName!=="SCRIPT" && n.tagName!=="STYLE"){
+    for(const a of ["placeholder","title"]){
+      if(n.hasAttribute(a)){ n.__oa=n.__oa||{}; const o=n.__oa[a]!==undefined?n.__oa[a]:n.getAttribute(a);
+        if(DE[o]!==undefined){ n.__oa[a]=o; n.setAttribute(a,LANG==="de"?DE[o]:o);} } }
+    n.childNodes.forEach(trNode);
+  }
+}
+const tr=s=>LANG==="de"&&DE[s]!==undefined?DE[s]:s;
+new MutationObserver(ms=>ms.forEach(m=>m.addedNodes.forEach(trNode))).observe(document.body,{childList:true,subtree:true});
+function setLang(l){ if(l!==LANG){ LANG=l; document.documentElement.lang=l; trNode(document.body); } }
+
+/* ---------- Murmi ---------- */
+const MURMI=`<svg class="puff" viewBox="0 0 120 120" aria-hidden="true">
+<ellipse cx="60" cy="109" rx="30" ry="5" fill="#000" opacity=".1"/>
+<g class="all">
+ <g class="waves" fill="none" stroke="#9D8CFF" stroke-width="3" stroke-linecap="round"><path d="M96 34 q10 10 0 22"/><path d="M104 28 q16 16 0 34"/></g>
+ <g class="tuft"><path d="M56 26 L52 10 L59 18 L62 6 L66 18 L72 11 L66 28Z" fill="var(--body-d)" stroke="var(--body-d)" stroke-width="2" stroke-linejoin="round"/></g>
+ <ellipse class="wing l" cx="21" cy="70" rx="9" ry="14" fill="var(--body-d)"/>
+ <ellipse class="wing r" cx="99" cy="70" rx="9" ry="14" fill="var(--body-d)"/>
+ <ellipse cx="60" cy="64" rx="42" ry="40" fill="var(--body)"/>
+ <ellipse cx="60" cy="76" rx="27" ry="22" fill="var(--belly)"/>
+ <ellipse cx="46" cy="104" rx="8" ry="4" fill="var(--beak)"/><ellipse cx="74" cy="104" rx="8" ry="4" fill="var(--beak)"/>
+ <ellipse cx="37" cy="68" rx="6" ry="4.5" fill="var(--cheek)" opacity=".7"/><ellipse cx="83" cy="68" rx="6" ry="4.5" fill="var(--cheek)" opacity=".7"/>
+ <g class="pupils">
+  <g class="eye a"><ellipse cx="46" cy="57" rx="4.6" ry="5.6" fill="#2B2438"/><circle cx="47.6" cy="55" r="1.6" fill="#fff"/></g>
+  <g class="eye b"><ellipse cx="74" cy="57" rx="4.6" ry="5.6" fill="#2B2438"/><circle cx="75.6" cy="55" r="1.6" fill="#fff"/></g>
+ </g>
+ <path d="M53 64 L67 64 L60 73Z" fill="var(--beak)" stroke="var(--beak)" stroke-width="2" stroke-linejoin="round"/>
+ <g class="dots" fill="#9D8CFF"><circle cx="46" cy="-2" r="3.2"/><circle cx="60" cy="-6" r="3.2"/><circle cx="74" cy="-2" r="3.2"/></g>
+ <g class="spark" fill="#FFC857"><path d="M14 22 l3 7 7 3 -7 3 -3 7 -3 -7 -7 -3 7 -3z"/><path d="M100 14 l2.5 6 6 2.5 -6 2.5 -2.5 6 -2.5 -6 -6 -2.5 6 -2.5z"/></g>
+</g></svg>`;
+function mountMurmi(){ $$("[data-murmi]").forEach(el=>{ if(!el.firstChild){ el.innerHTML=MURMI; const s=el.firstChild; s.classList.add(el.dataset.murmi);
+  if(el.dataset.murmi==="sleepy") s.classList.add("sleepy"); }}); }
+mountMurmi();
+function moodAll(mood){
+  $$("[data-murmi='main'] svg, [data-murmi='big'] svg").forEach(s=>{
+    s.classList.remove("listening","thinking","happy","sleepy"); if(mood) s.classList.add(mood); });
+}
+function happy(el){ const s=$(el); s.classList.add("happy"); setTimeout(()=>s.classList.remove("happy"),2200); }
+
+/* ---------- tabs ---------- */
+function tab(name){
+  $$("section").forEach(s=>s.classList.toggle("hidden",s.id!==name));
+  $$(".tab").forEach(b=>b.classList.toggle("on",b.dataset.tab===name));
+  if(name==="history") loadHistory();
+  if(name==="settings") loadDevices();
+}
+$$(".tab").forEach(b=>b.onclick=()=>tab(b.dataset.tab));
+
+/* ---------- state ---------- */
+let S=null, lastState="", lastDownloading=false;
+const HERO={idle:["Ready when you are","Hold your hotkey and talk. I'll type it for you."],
+ listening:["I'm listening…","Keep talking, release when you're done."],
+ thinking:["Turning that into words…","Just a moment."],
+ paused:["Taking a nap","Dictation is paused. Wake me up any time."]};
+function hk(s){return s.split("+").map(k=>`<kbd>${k==="windows"?"Win":k[0].toUpperCase()+k.slice(1)}</kbd>`).join(" + ");}
+async function poll(){
+  try{ S=await api("/api/state"); }catch(e){ return setTimeout(poll,1000); }
+  const st=S.state, c=S.config;
+  setLang(S.lang);
+  if(st!==lastState){
+    if(lastState==="thinking" && st==="idle") happy("[data-murmi='big'] svg");
+    moodAll(st==="listening"?"listening":st==="thinking"?"thinking":st==="paused"?"sleepy":null);
+    $("#heroTitle").textContent=HERO[st][0]; $("#heroSub").textContent=HERO[st][1];
+    $("#statePill").textContent=st; $("#statePill").className="pill "+(st==="idle"?"ok":st==="paused"?"warn":"");
+    $("#pauseBtn").textContent=st==="paused"?"Resume dictation":"Pause dictation"; lastState=st; }
+  $("#hkShow").innerHTML=hk(c.hotkey); $("#hkShow2").innerHTML=hk(c.hotkey);
+  $("#hkExplain").textContent=c.mode==="hold"?"Hold to talk, release to paste":"Press once to start, again to stop";
+  renderModels();
+  const n=S.attention;
+  $("#navBadge").classList.toggle("hidden",!n); $("#navBadge").textContent=n;
+  $("#attention").classList.toggle("hidden",!n);
+  $("#attText").textContent=LANG==="de"
+    ?(n===1?"1 Aufnahme braucht einen Blick (das Audio ist sicher).":`${n} Aufnahmen brauchen einen Blick (das Audio ist sicher).`)
+    :(n===1?"1 recording needs a look (its audio is safe).":`${n} recordings need a look (their audio is safe).`);
+  $("#offlineInfo").textContent=c.offline_mode
+    ?(LANG==="de"?`Offline-Modus aktiv · blockierte Verbindungsversuche: ${S.blocked}`:`Offline mode is on · blocked connection attempts: ${S.blocked}`)
+    :(LANG==="de"?"Offline-Modus ist aus.":"Offline mode is off.");
+  syncSettings();
+  setTimeout(poll,S.download.running?500:700);
+}
+function renderModels(){
+  const c=S.config, d=S.download, box=$("#models");
+  const key=JSON.stringify([c.model,S.downloaded,d.running,Math.round(d.pct/2),d.error,LANG]);
+  if(box.dataset.key===key) return; box.dataset.key=key;
+  $("#modelHint").textContent=S.model_ready?"":"Pick one to download (one time only)";
+  box.innerHTML=Object.entries(S.models).map(([k,m])=>{
+    const ready=S.downloaded[k], dl=d.running&&d.name===k;
+    return `<div class="model ${c.model===k?"on":""}"><span class="nm">${m.label}</span><span class="muted" style="flex:1">${tr(m.note)} ·${m.mb>=1000?(m.mb/1000).toFixed(1)+" GB":m.mb+" MB"}</span>
+    ${dl?`<div class="bar"><i style="width:${d.pct}%"></i></div><span class="muted">${Math.round(d.pct)}%</span>`
+      : ready? (c.model===k?'<span class="pill ok">In use</span>':`<button class="btn sm" data-use="${k}">Use</button>`)
+      : `<button class="btn sm primary" data-dl="${k}" ${d.running?"disabled":""}>Download</button>`}</div>`;}).join("")
+    +(d.error&&!d.running?`<div class="pill bad" style="border-radius:10px;padding:8px 12px">${tr("Download failed")}: ${esc(d.error)}</div>`:"");
+  $$("[data-use]").forEach(b=>b.onclick=()=>post("/api/config",{model:b.dataset.use}));
+  $$("[data-dl]").forEach(b=>b.onclick=async()=>{await post("/api/model/download",{name:b.dataset.dl});await post("/api/config",{model:b.dataset.dl});});
+}
+$("#pauseBtn").onclick=()=>post("/api/pause",{paused:S.state!=="paused"});
+$("#attGo").onclick=()=>{ tab("history"); $("#hfilter").value="attention"; loadHistory(); };
+
+/* ---------- settings ---------- */
+let synced=false;
+function syncSettings(){
+  if(synced) return; synced=true; const c=S.config;
+  $("#modelsDir").value=c.models_dir||"";
+  $("#importBtn").onclick=async()=>{ const p=$("#importPath").value.trim(); if(!p) return;
+    $("#importMsg").textContent=tr("Importing…"); await post("/api/model/import",{path:p});
+    const w=setInterval(async()=>{ const s=await api("/api/state"); if(!s.download.running){ clearInterval(w);
+      $("#importMsg").textContent=s.download.error?s.download.error:tr("Import finished. Choose the model on the Home screen."); } },700); };
+  $("#modelsDirSave").onclick=async()=>{ await post("/api/config",{models_dir:$("#modelsDir").value.trim()}); };
+  ["mode","language","retention_days","ui_language"].forEach(k=>{ const el=$("#"+k); el.value=String(c[k]); el.onchange=()=>post("/api/config",{[k]:k==="retention_days"?+el.value:el.value}); });
+  ["filler_removal","voice_commands","sounds","auto_paste","restore_clipboard","autostart","offline_mode"].forEach(k=>{
+    const el=$("#"+k); el.checked=!!c[k]; el.onchange=()=>post("/api/config",{[k]:el.checked}); });
+  renderDict();
+}
+async function loadDevices(){
+  const devs=await api("/api/devices"), sel=$("#mic");
+  sel.innerHTML='<option value="">System default</option>'+devs.map(d=>`<option value="${d.id}">${esc(d.name)}</option>`).join("");
+  sel.value=S.config.mic==null?"":String(S.config.mic);
+  sel.onchange=()=>post("/api/config",{mic:sel.value===""?null:+sel.value});
+}
+$("#hkSet").onclick=async()=>{
+  $("#hkMsg").textContent="Press and release your new key combination…";
+  const r=await post("/api/hotkey/capture");
+  if(r.hotkey){ await post("/api/config",{hotkey:r.hotkey}); $("#hkMsg").textContent="Saved!"; }
+  else $("#hkMsg").textContent="Nothing pressed.";
+  setTimeout(()=>$("#hkMsg").textContent="",2500);
+};
+
+/* ---------- dictionary ---------- */
+function renderDict(){
+  const c=S.config;
+  $("#terms").innerHTML=c.terms.map((t,i)=>`<span class="tag">${esc(t)}<button data-rt="${i}">✕</button></span>`).join("")||'<span class="muted">Nothing yet.</span>';
+  $$("[data-rt]").forEach(b=>b.onclick=async()=>{c.terms.splice(+b.dataset.rt,1);await post("/api/config",{terms:c.terms});renderDict();});
+  $("#reps").innerHTML=c.replacements.map((r,i)=>`<div class="rep"><input type="text" data-f="${i}" value="${esc(r.from)}" placeholder="when I say…"><span>→</span><input type="text" data-t="${i}" value="${esc(r.to)}" placeholder="write…"><button class="btn sm danger" data-rr="${i}">✕</button></div>`).join("");
+  const save=()=>post("/api/config",{replacements:c.replacements});
+  $$("[data-f]").forEach(e=>e.onchange=()=>{c.replacements[+e.dataset.f].from=e.value;save();});
+  $$("[data-t]").forEach(e=>e.onchange=()=>{c.replacements[+e.dataset.t].to=e.value;save();});
+  $$("[data-rr]").forEach(b=>b.onclick=async()=>{c.replacements.splice(+b.dataset.rr,1);await save();renderDict();});
+}
+$("#termAdd").onclick=async()=>{const v=$("#termIn").value.split(",").map(s=>s.trim()).filter(Boolean);
+  if(!v.length) return; S.config.terms.push(...v); $("#termIn").value=""; await post("/api/config",{terms:S.config.terms}); renderDict(); happy("[data-murmi='small'] svg");};
+$("#termIn").onkeydown=e=>{if(e.key==="Enter")$("#termAdd").click();};
+$("#repAdd").onclick=()=>{S.config.replacements.push({from:"",to:""});renderDict();};
+
+/* ---------- history ---------- */
+function fmt(ts){const d=new Date(ts*1000);return d.toLocaleDateString(undefined,{day:"numeric",month:"short"})+" "+d.toLocaleTimeString(undefined,{hour:"2-digit",minute:"2-digit"});}
+const STATUS={pending:["waiting","warn"],transcribing:["transcribing","warn"],failed:["failed, audio safe","bad"],empty:["no speech heard","warn"],recording:["interrupted","bad"]};
+async function loadHistory(){
+  const f=$("#hfilter").value, q=encodeURIComponent($("#q").value);
+  const rows=await api(`/api/history?q=${q}&trash=${f==="trash"?1:0}&attention=${f==="attention"?1:0}`);
+  const box=$("#hlist");
+  if(!rows.length){ box.innerHTML=`<div class="empty"><span data-murmi="small"></span><div>${f==="trash"?"Nothing in Recently deleted.":f==="attention"?"All good. Nothing needs attention.":"No recordings yet. Hold your hotkey and say hi!"}</div></div>`;
+    mountMurmi(); const s=box.querySelector("svg"); if(s){s.style.width=s.style.height="120px";} return; }
+  box.innerHTML=rows.map(r=>{
+    const st=STATUS[r.status];
+    return `<div class="item"><div class="meta"><span>${fmt(r.created)}</span><span>${(r.duration||0).toFixed(1)}s</span>${r.lang?`<span>${r.lang}</span>`:""}
+      ${st?`<span class="pill ${st[1]}">${st[0]}</span>`:""}${r.starred?'<span class="pill star">★ kept forever</span>':""}${r.note?`<span>${esc(r.note)}</span>`:""}</div>
+      <div class="txt">${r.text?esc(r.text):`<span class="muted">${esc(r.error||"No text yet.")}</span>`}</div>
+      <div class="acts">
+        ${(r.has_audio||r.trash_path)?`<audio controls preload="none" src="/audio/${r.id}?t=${TOKEN}"></audio>`:'<span class="muted" style="font-size:12px">audio expired</span>'}
+        ${r.text?`<button class="btn sm" data-copy="${r.id}">Copy</button>`:""}
+        ${f!=="trash"&&r.has_audio&&r.status!=="recording"?`<button class="btn sm" data-act="retry" data-id="${r.id}">${r.text?"Re-transcribe":"Transcribe"}</button>`:""}
+        ${f!=="trash"?`<button class="btn sm" data-act="star" data-id="${r.id}">${r.starred?"★ Unstar":"☆ Keep forever"}</button><button class="btn sm danger" data-act="trash" data-id="${r.id}">Delete</button>`
+          :`<button class="btn sm primary" data-act="restore" data-id="${r.id}">Restore</button>`}
+      </div></div>`;}).join("");
+  const byId=Object.fromEntries(rows.map(r=>[r.id,r]));
+  $$("[data-copy]").forEach(b=>b.onclick=async()=>{await navigator.clipboard.writeText(byId[b.dataset.copy].text);b.textContent="Copied ✓";setTimeout(()=>b.textContent="Copy",1200);});
+  $$("[data-act]").forEach(b=>b.onclick=async()=>{await post(`/api/history/${b.dataset.id}/${b.dataset.act}`);setTimeout(loadHistory,b.dataset.act==="retry"?400:0);});
+}
+$("#q").oninput=()=>loadHistory(); $("#hfilter").onchange=loadHistory;
+$("#openFolder").onclick=()=>post("/api/open-folder");
+setInterval(()=>{ if(!$("#history").classList.contains("hidden") && S && (S.state==="thinking"||lastState!==S.state)) loadHistory(); },2500);
+poll();
+</script>
+</body>
+</html>
