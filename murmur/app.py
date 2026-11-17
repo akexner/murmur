@@ -8,7 +8,7 @@ import time
 import pystray
 from PIL import ImageDraw
 
-from . import mascot, paths
+from . import __version__, mascot, paths
 from .controller import Controller
 from .server import make_server
 
@@ -22,7 +22,9 @@ def _single_instance():
 def main():
     logging.basicConfig(filename=paths.log_path(), level=logging.INFO,
                         format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+    logging.info("process %s starting", os.getpid())
     if not _single_instance():
+        logging.info("another Murmur is already running; this copy (pid %s) will exit", os.getpid())
         from . import i18n
         msg = ("Murmur is already running. Look for the little bird in your system tray (bottom right).")
         ctypes.windll.user32.MessageBoxW(0, i18n.t(msg, i18n.system_lang()), "Murmur", 0x40)
@@ -140,12 +142,20 @@ def main():
         w.events.closing += on_closing
         if first:
             ctl.cfg.update({"first_run_done": True})
+        logging.info("Murmur %s started (pid %s, window shown: %s)", __version__, os.getpid(), show_now)
         webview.start()
+        logging.warning("window layer ended (quitting=%s)", quitting.is_set())
     except Exception:
         logging.exception("webview unavailable, falling back to browser")
         import webbrowser
         window["w"] = None
         if show_now:
             webbrowser.open(f"{url}?t={token}")
+    if not quitting.is_set():
+        # The window system ended on its own (for example a web-view crash). Dictation, hotkey and tray must
+        # keep working, so stay alive; "Open Murmur" then opens the settings page in the browser instead.
+        window["w"] = None
+        logging.warning("keeping Murmur alive in the tray without its own window")
         quitting.wait()
+    logging.info("Murmur exiting normally")
     os._exit(0)
