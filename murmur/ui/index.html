@@ -65,6 +65,7 @@ kbd{background:var(--soft);border:1px solid var(--line);border-bottom-width:2px;
 .tag button{all:unset;cursor:pointer;color:var(--muted);padding:0 6px}
 .rep{display:flex;gap:8px;align-items:center;margin-bottom:8px}
 .rep input{min-width:0;flex:1}
+.rep.wrap{flex-wrap:wrap}.rep.wrap input{min-width:160px}.rep.wrap select{min-width:0;flex:1 1 170px}.rep.wrap textarea{min-width:220px}
 label.sw{display:flex;gap:10px;align-items:center;padding:6px 0}
 .banner{background:#FFF0D2;color:#6B4607;border-radius:14px;padding:10px 14px;margin-bottom:16px;display:flex;gap:10px;align-items:center}
 .hidden{display:none!important}
@@ -141,6 +142,8 @@ label.sw{display:flex;gap:10px;align-items:center;padding:6px 0}
     </div>
   </div>
   <div id="attention" class="banner hidden"><span>🪶</span><span id="attText"></span><button class="btn sm" id="attGo">Take a look</button></div>
+  <div id="updBanner" class="banner hidden" style="background:#DDF5EA;color:#14573F"><span>⬆️</span><span id="updText"></span><button class="btn sm primary" id="updGo">Install update</button></div>
+  <div id="updResult" class="banner hidden"><span>ℹ️</span><span id="updResText"></span><button class="btn sm" id="updResOk">OK</button></div>
   <div class="card" id="modelCard">
     <div class="row sp"><h3 style="margin:0">Speech model</h3><span class="muted" id="modelHint"></span></div>
     <div class="models" id="models" style="margin-top:12px"></div>
@@ -185,6 +188,18 @@ label.sw{display:flex;gap:10px;align-items:center;padding:6px 0}
   <div class="card">
     <h3>Voice commands</h3>
     <p class="muted" style="margin:0">Say “new line” or “new paragraph” (also “neue Zeile”, “neuer Absatz”) and Murmur types the break.</p>
+    <p class="muted" style="margin:8px 0 0">Say “scratch that” (or “streich das”) to remove what Murmur just pasted. This only works right after pasting, in the same window, and only if you haven't typed since.</p>
+  </div>
+  <div class="card">
+    <h3>German tax vocabulary</h3>
+    <p class="muted" style="margin-top:0">About 130 terms (Umsatzsteuer, DATEV, BFH, GoBD, …). Helps recognition and fixes spelling, for example “datev” becomes “DATEV”.</p>
+    <label class="sw"><input type="checkbox" id="glossary_tax"> Use the German tax vocabulary pack</label>
+  </div>
+  <div class="card">
+    <h3>Snippets</h3>
+    <p class="muted" style="margin-top:0">Say the trigger phrase on its own (or “insert” plus the trigger) and Murmur pastes the saved text exactly as written.</p>
+    <div id="snips"></div>
+    <button class="btn" id="snipAdd">+ Add snippet</button>
   </div>
 </section>
 
@@ -194,8 +209,10 @@ label.sw{display:flex;gap:10px;align-items:center;padding:6px 0}
   <div class="card">
     <h3>Hotkey</h3>
     <div class="row"><span id="hkShow2"></span><button class="btn" id="hkSet">Change…</button><span class="muted" id="hkMsg"></span></div>
+    <div class="row" style="margin-top:12px"><span>Quick pick</span>
+      <select id="hkPreset"><option value="">Choose a preset…</option><option value="ctrl+windows">Ctrl + Win</option><option value="right ctrl">Right Ctrl (single key)</option><option value="f9">F9 (single key)</option><option value="ctrl+alt+space">Ctrl + Alt + Space</option><option value="mouse5">Mouse side button (forward)</option><option value="mouse4">Mouse side button (back)</option></select></div>
     <div class="row" style="margin-top:12px"><span>Mode</span>
-      <select id="mode"><option value="hold">Hold to talk</option><option value="toggle">Press to start, press again to stop</option></select></div>
+      <select id="mode"><option value="smart">Hold to talk, or tap once for hands-free</option><option value="hold">Hold to talk</option><option value="toggle">Press to start, press again to stop</option></select></div>
   </div>
   <div class="card">
     <h3>Voice</h3>
@@ -211,6 +228,28 @@ label.sw{display:flex;gap:10px;align-items:center;padding:6px 0}
     <label class="sw"><input type="checkbox" id="auto_paste"> Paste text where my cursor is</label>
     <label class="sw"><input type="checkbox" id="restore_clipboard"> Put my previous clipboard back afterwards</label>
     <label class="sw"><input type="checkbox" id="autostart"> Start Murmur with Windows</label>
+  </div>
+  <div class="card">
+    <h3>Microphone check</h3>
+    <p class="muted" style="margin-top:0">Press the button and say a normal sentence for 3 seconds.</p>
+    <div class="row"><button class="btn primary" id="micTest">Test microphone</button><button class="btn" id="micPlay" disabled>Play back</button></div>
+    <div class="bar" style="margin-top:12px;height:10px"><i id="micBar"></i></div>
+    <p id="micVerdict" style="margin:10px 0 0"></p>
+  </div>
+  <div class="card">
+    <h3>Per-app behaviour</h3>
+    <p class="muted" style="margin-top:0">Choose how Murmur writes in different programs. Writing styles use your local Ollama model (see “Text polish”).</p>
+    <datalist id="appList"></datalist>
+    <div id="profiles"></div>
+    <button class="btn" id="profAdd">+ Add app</button>
+  </div>
+  <div class="card">
+    <h3>Updates (USB stick or folder)</h3>
+    <p class="muted" style="margin-top:0">Copy a signed .murmurupdate file to a USB stick. When Murmur sees it, it checks the signature and offers to install it. No internet needed. Murmur never installs anything that isn't signed with the owner's key.</p>
+    <div class="row"><span id="verInfo"></span><button class="btn" id="updCheck">Check now</button></div>
+    <div class="row" style="margin-top:10px"><input type="text" id="updFolder" placeholder="Optional: also look in this folder or network share" style="flex:1"><button class="btn" id="updFolderSave">Save</button></div>
+    <label class="sw"><input type="checkbox" id="update_auto"> Install verified updates automatically (no question)</label>
+    <div id="updStatus" class="muted" style="font-size:13px"></div>
   </div>
   <div class="card">
     <h3>Interface language</h3>
@@ -239,7 +278,7 @@ label.sw{display:flex;gap:10px;align-items:center;padding:6px 0}
       <select id="retention_days"><option value="0">Forever</option><option value="90">90 days</option><option value="30">30 days</option><option value="7">7 days</option><option value="1">1 day</option></select></div>
     <p class="muted" style="margin-bottom:0;font-size:13px">After that, audio moves to “Recently deleted” for 14 more days before it's gone. The text stays in History. Star a clip to keep its audio forever.</p>
   </div>
-  <div class="card tip"><span data-murmi="small"></span><div>Murmur v1.1 · free, open-source models by OpenAI Whisper, run locally with faster-whisper.</div></div>
+  <div class="card tip"><span data-murmi="small"></span><div>Murmur v1.2 · free, open-source models by OpenAI Whisper, run locally with faster-whisper.</div></div>
 </section>
 </main>
 
@@ -305,11 +344,43 @@ const DE={
 "Or use models directly from this folder (optional)":"Oder Modelle direkt aus diesem Ordner nutzen (optional)","Use folder":"Ordner verwenden",
 "Tip: download a model once on any PC, then copy the folder %APPDATA%\\Murmur\\models to a USB stick or network drive.":"Tipp: Lade ein Modell einmal auf einem beliebigen PC herunter und kopiere dann den Ordner %APPDATA%\\Murmur\\models auf einen USB-Stick oder ein Netzlaufwerk.",
 "Importing…":"Importiere…","Import finished. Choose the model on the Home screen.":"Import abgeschlossen. Wähle das Modell auf der Startseite.",
+"Quick pick":"Schnellauswahl","Choose a preset…":"Voreinstellung wählen…","Ctrl + Win":"Strg + Win","Right Ctrl (single key)":"Rechte Strg-Taste (eine Taste)",
+"F9 (single key)":"F9 (eine Taste)","Ctrl + Alt + Space":"Strg + Alt + Leertaste","Mouse side button (forward)":"Maus-Seitentaste (vor)","Mouse side button (back)":"Maus-Seitentaste (zurück)",
+"Hold to talk, or tap once for hands-free":"Halten zum Sprechen, oder einmal antippen für Freisprechen",
+"Hold to talk, release to paste. A quick tap starts hands-free.":"Halten zum Sprechen, Loslassen zum Einfügen. Kurzes Antippen startet das Freisprechen.",
+"Hands-free: tap your hotkey again to stop.":"Freisprechen: Tippe den Hotkey erneut an, um zu stoppen.",
+"Say “scratch that” (or “streich das”) to remove what Murmur just pasted. This only works right after pasting, in the same window, and only if you haven't typed since.":"Sag „streich das“ (oder „scratch that“), um den soeben eingefügten Text zu entfernen. Das klappt nur direkt nach dem Einfügen, im selben Fenster und nur, wenn du seitdem nichts getippt hast.",
+"German tax vocabulary":"Deutsches Steuer-Vokabular",
+"About 130 terms (Umsatzsteuer, DATEV, BFH, GoBD, …). Helps recognition and fixes spelling, for example “datev” becomes “DATEV”.":"Etwa 130 Begriffe (Umsatzsteuer, DATEV, BFH, GoBD, …). Verbessert die Erkennung und korrigiert die Schreibweise, zum Beispiel wird „datev“ zu „DATEV“.",
+"Use the German tax vocabulary pack":"Deutsches Steuer-Vokabular verwenden",
+"Snippets":"Textbausteine","Say the trigger phrase on its own (or “insert” plus the trigger) and Murmur pastes the saved text exactly as written.":"Sag das Auslösewort allein (oder „einfügen“ plus Auslösewort) und Murmur fügt den gespeicherten Text genau so ein.",
+"+ Add snippet":"+ Textbaustein hinzufügen","Trigger phrase, e.g. closing email":"Auslösewort, z. B. Grußformel","Text to insert":"Einzufügender Text",
+"Microphone check":"Mikrofon-Check","Press the button and say a normal sentence for 3 seconds.":"Drück den Knopf und sprich 3 Sekunden lang einen normalen Satz.",
+"Test microphone":"Mikrofon testen","Play back":"Wiedergeben","Stop recording first.":"Beende zuerst die Aufnahme.","Listening…":"Hört zu…",
+"✅ Sounds good. The level is healthy.":"✅ Klingt gut. Der Pegel passt.",
+"🔈 Quite quiet. Move closer to the microphone or raise the input volume in Windows.":"🔈 Ziemlich leise. Geh näher ans Mikrofon oder erhöhe die Eingangslautstärke in Windows.",
+"🔇 Almost nothing recorded. Check that the right microphone is selected and not muted.":"🔇 Fast nichts aufgenommen. Prüfe, ob das richtige Mikrofon gewählt und nicht stummgeschaltet ist.",
+"📢 Too loud (distorting). Lower the input volume or move back a little.":"📢 Zu laut (verzerrt). Verringere die Eingangslautstärke oder geh etwas zurück.",
+"📢 Very loud. Lower the input volume a little.":"📢 Sehr laut. Verringere die Eingangslautstärke etwas.",
+"Per-app behaviour":"Verhalten je Programm","Choose how Murmur writes in different programs. Writing styles use your local Ollama model (see “Text polish”).":"Lege fest, wie Murmur in verschiedenen Programmen schreibt. Schreibstile nutzen dein lokales Ollama-Modell (siehe „Textglättung“).",
+"+ Add app":"+ Programm hinzufügen","e.g. outlook.exe":"z. B. outlook.exe","Default (follow my settings)":"Standard (meine Einstellungen)","No polish":"Keine Glättung",
+"Formal":"Förmlich","Friendly":"Freundlich","Concise":"Knapp","Paste with Ctrl+V":"Einfügen mit Strg+V","Paste with Ctrl+Shift+V (terminals)":"Einfügen mit Strg+Umschalt+V (Terminals)","Paste with Shift+Insert":"Einfügen mit Umschalt+Einfg",
+"Updates (USB stick or folder)":"Updates (USB-Stick oder Ordner)",
+"Copy a signed .murmurupdate file to a USB stick. When Murmur sees it, it checks the signature and offers to install it. No internet needed. Murmur never installs anything that isn't signed with the owner's key.":"Kopiere eine signierte .murmurupdate-Datei auf einen USB-Stick. Sobald Murmur sie sieht, prüft es die Signatur und bietet die Installation an. Kein Internet nötig. Murmur installiert nie etwas, das nicht mit dem Schlüssel des Besitzers signiert ist.",
+"Check now":"Jetzt prüfen","Optional: also look in this folder or network share":"Optional: auch in diesem Ordner oder Netzlaufwerk suchen","Save":"Speichern",
+"Install verified updates automatically (no question)":"Geprüfte Updates automatisch installieren (ohne Rückfrage)","Install update":"Update installieren","OK":"OK",
+"Signature is missing or invalid: this update was not made by the owner of the key.":"Signatur fehlt oder ist ungültig: Dieses Update stammt nicht vom Besitzer des Schlüssels.",
+"Damaged or incomplete file.":"Beschädigte oder unvollständige Datei.","Not a Murmur update package.":"Kein Murmur-Update-Paket.",
+"The update file is damaged or has been tampered with (hash mismatch).":"Die Update-Datei ist beschädigt oder wurde manipuliert (Prüfsumme stimmt nicht).",
+"Unsupported update format.":"Nicht unterstütztes Update-Format.","Unsafe path inside update package.":"Unsicherer Pfad im Update-Paket.",
+"Update does not contain Murmur.exe.":"Das Update enthält keine Murmur.exe.",
+"The Murmur folder is not writable. Move it somewhere you can write (not Program Files).":"Der Murmur-Ordner ist nicht beschreibbar. Verschiebe ihn an einen Ort mit Schreibrechten (nicht Programme).",
+"Updates can only be installed in the packaged app.":"Updates lassen sich nur in der fertig gepackten App installieren.",
 "Audio safety":"Audio-Sicherheit",
 "Audio is written to disk while you speak and the file stays valid even if the app crashes. Interrupted recordings are recovered on the next launch and transcribed into History. Murmur never deletes audio that failed to transcribe.":"Audio wird beim Sprechen auf die Festplatte geschrieben und bleibt auch bei einem Absturz gültig. Unterbrochene Aufnahmen werden beim nächsten Start wiederhergestellt und im Verlauf transkribiert. Murmur löscht nie Audio, dessen Transkription fehlgeschlagen ist.",
 "Keep finished audio":"Fertiges Audio behalten","Forever":"Für immer","90 days":"90 Tage","30 days":"30 Tage","7 days":"7 Tage","1 day":"1 Tag",
 "After that, audio moves to “Recently deleted” for 14 more days before it's gone. The text stays in History. Star a clip to keep its audio forever.":"Danach liegt das Audio noch 14 Tage unter „Zuletzt gelöscht“, bevor es weg ist. Der Text bleibt im Verlauf. Markiere einen Clip mit Stern, um sein Audio für immer zu behalten.",
-"Murmur v1.1 · free, open-source models by OpenAI Whisper, run locally with faster-whisper.":"Murmur v1.1 · kostenlose Open-Source-Modelle von OpenAI Whisper, lokal mit faster-whisper."
+"Murmur v1.2 · free, open-source models by OpenAI Whisper, run locally with faster-whisper.":"Murmur v1.2 · kostenlose Open-Source-Modelle von OpenAI Whisper, lokal mit faster-whisper."
 };
 let LANG="en";
 function trNode(n){
@@ -361,7 +432,7 @@ function tab(name){
   $$("section").forEach(s=>s.classList.toggle("hidden",s.id!==name));
   $$(".tab").forEach(b=>b.classList.toggle("on",b.dataset.tab===name));
   if(name==="history") loadHistory();
-  if(name==="settings") loadDevices();
+  if(name==="settings"){ loadDevices(); loadApps(); }
 }
 $$(".tab").forEach(b=>b.onclick=()=>tab(b.dataset.tab));
 
@@ -371,7 +442,7 @@ const HERO={idle:["Ready when you are","Hold your hotkey and talk. I'll type it 
  listening:["I'm listening…","Keep talking, release when you're done."],
  thinking:["Turning that into words…","Just a moment."],
  paused:["Taking a nap","Dictation is paused. Wake me up any time."]};
-function hk(s){return s.split("+").map(k=>`<kbd>${k==="windows"?"Win":k[0].toUpperCase()+k.slice(1)}</kbd>`).join(" + ");}
+function hk(s){return s.split("+").map(k=>`<kbd>${k==="windows"?"Win":k.replace(/^mouse(\d)$/,"Mouse $1").replace(/\b\w/g,m=>m.toUpperCase())}</kbd>`).join(" + ");}
 async function poll(){
   try{ S=await api("/api/state"); }catch(e){ return setTimeout(poll,1000); }
   const st=S.state, c=S.config;
@@ -383,7 +454,19 @@ async function poll(){
     $("#statePill").textContent=st; $("#statePill").className="pill "+(st==="idle"?"ok":st==="paused"?"warn":"");
     $("#pauseBtn").textContent=st==="paused"?"Resume dictation":"Pause dictation"; lastState=st; }
   $("#hkShow").innerHTML=hk(c.hotkey); $("#hkShow2").innerHTML=hk(c.hotkey);
-  $("#hkExplain").textContent=c.mode==="hold"?"Hold to talk, release to paste":"Press once to start, again to stop";
+  $("#hkExplain").textContent=tr(c.mode==="hold"?"Hold to talk, release to paste":c.mode==="smart"?"Hold to talk, release to paste. A quick tap starts hands-free.":"Press once to start, again to stop");
+  if(st==="listening"&&S.latched) $("#heroSub").textContent=tr("Hands-free: tap your hotkey again to stop.");
+  else if(st==="listening") $("#heroSub").textContent=tr(HERO.listening[1]);
+  const u=S.update, av=u.available;
+  $("#updBanner").classList.toggle("hidden",!av);
+  if(av){ const drive=(av.path||"").slice(0,3);
+    $("#updText").textContent=(LANG==="de"?`Update ${av.version} gefunden (${drive}). Signatur geprüft. Murmur startet neu, deine Daten bleiben.`:`Update ${av.version} found (${drive}). Signature verified. Murmur restarts and your data stays.`)+(u.error?` ${tr(u.error)}`:"");
+    $("#updGo").disabled=!!u.busy; }
+  const rs=u.result; $("#updResult").classList.toggle("hidden",!rs);
+  if(rs) $("#updResText").textContent=rs.status==="ok"?(LANG==="de"?`Murmur wurde auf Version ${rs.version} aktualisiert.`:`Murmur was updated to version ${rs.version}.`)
+    :(LANG==="de"?`Update fehlgeschlagen: ${rs.message} Die vorherige Version bleibt erhalten.`:`Update failed: ${rs.message} Your previous version is still in place.`);
+  $("#verInfo").textContent="Murmur "+S.version;
+  $("#updStatus").textContent=u.rejected.length?u.rejected.map(x=>`${x.path}: ${tr(x.reason)}`).join(" · "):"";
   renderModels();
   const n=S.attention;
   $("#navBadge").classList.toggle("hidden",!n); $("#navBadge").textContent=n;
@@ -426,9 +509,9 @@ function syncSettings(){
       $("#importMsg").textContent=s.download.error?s.download.error:tr("Import finished. Choose the model on the Home screen."); } },700); };
   $("#modelsDirSave").onclick=async()=>{ await post("/api/config",{models_dir:$("#modelsDir").value.trim()}); };
   ["mode","language","retention_days","ui_language"].forEach(k=>{ const el=$("#"+k); el.value=String(c[k]); el.onchange=()=>post("/api/config",{[k]:k==="retention_days"?+el.value:el.value}); });
-  ["filler_removal","voice_commands","sounds","auto_paste","restore_clipboard","autostart","offline_mode","llm_cleanup"].forEach(k=>{
+  ["filler_removal","voice_commands","sounds","auto_paste","restore_clipboard","autostart","offline_mode","llm_cleanup","glossary_tax","update_auto"].forEach(k=>{
     const el=$("#"+k); el.checked=!!c[k]; el.onchange=()=>post("/api/config",{[k]:el.checked}); });
-  renderDict();
+  renderDict(); renderSnips(); renderProfiles(); wireNew();
 }
 async function loadLlm(){
   const ms=await api("/api/ollama/models"), sel=$("#llm_model");
@@ -468,6 +551,56 @@ $("#termAdd").onclick=async()=>{const v=$("#termIn").value.split(",").map(s=>s.t
   if(!v.length) return; S.config.terms.push(...v); $("#termIn").value=""; await post("/api/config",{terms:S.config.terms}); renderDict(); happy("[data-murmi='small'] svg");};
 $("#termIn").onkeydown=e=>{if(e.key==="Enter")$("#termAdd").click();};
 $("#repAdd").onclick=()=>{S.config.replacements.push({from:"",to:""});renderDict();};
+
+/* ---------- snippets, per-app rules, mic check, updates ---------- */
+const TA='style="flex:1;font:inherit;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:10px;padding:7px 10px"';
+function renderSnips(){
+  const c=S.config;
+  $("#snips").innerHTML=c.snippets.map((s,i)=>`<div class="rep wrap" style="align-items:flex-start"><input type="text" data-st="${i}" value="${esc(s.trigger)}" placeholder="Trigger phrase, e.g. closing email" style="max-width:220px"><textarea data-sx="${i}" rows="2" placeholder="Text to insert" ${TA}>${esc(s.text)}</textarea><button class="btn sm danger" data-sd="${i}">✕</button></div>`).join("");
+  const save=()=>post("/api/config",{snippets:c.snippets});
+  $$("[data-st]").forEach(e=>e.onchange=()=>{c.snippets[+e.dataset.st].trigger=e.value;save();});
+  $$("[data-sx]").forEach(e=>e.onchange=()=>{c.snippets[+e.dataset.sx].text=e.value;save();});
+  $$("[data-sd]").forEach(b=>b.onclick=async()=>{c.snippets.splice(+b.dataset.sd,1);await save();renderSnips();});
+}
+$("#snipAdd").onclick=()=>{S.config.snippets.push({trigger:"",text:""});renderSnips();};
+
+const STYLES=[["default","Default (follow my settings)"],["off","No polish"],["formal","Formal"],["friendly","Friendly"],["concise","Concise"]];
+const PASTES=[["ctrl+v","Paste with Ctrl+V"],["ctrl+shift+v","Paste with Ctrl+Shift+V (terminals)"],["shift+insert","Paste with Shift+Insert"]];
+function renderProfiles(){
+  const c=S.config;
+  $("#profiles").innerHTML=c.app_profiles.map((p,i)=>`<div class="rep wrap"><input type="text" list="appList" data-pa="${i}" value="${esc(p.app)}" placeholder="e.g. outlook.exe"><select data-ps="${i}">${STYLES.map(([v,l])=>`<option value="${v}" ${(p.style||"default")===v?"selected":""}>${l}</option>`).join("")}</select><select data-pk="${i}">${PASTES.map(([v,l])=>`<option value="${v}" ${(p.paste_key||"ctrl+v")===v?"selected":""}>${l}</option>`).join("")}</select><button class="btn sm danger" data-pd="${i}">✕</button></div>`).join("");
+  const save=()=>post("/api/config",{app_profiles:c.app_profiles});
+  $$("[data-pa]").forEach(e=>e.onchange=()=>{c.app_profiles[+e.dataset.pa].app=e.value.trim();save();});
+  $$("[data-ps]").forEach(e=>e.onchange=()=>{c.app_profiles[+e.dataset.ps].style=e.value;save();});
+  $$("[data-pk]").forEach(e=>e.onchange=()=>{c.app_profiles[+e.dataset.pk].paste_key=e.value;save();});
+  $$("[data-pd]").forEach(b=>b.onclick=async()=>{c.app_profiles.splice(+b.dataset.pd,1);await save();renderProfiles();});
+}
+async function loadApps(){ try{ const a=await api("/api/apps"); $("#appList").innerHTML=a.map(x=>`<option value="${esc(x)}">`).join(""); }catch(e){} }
+$("#profAdd").onclick=()=>{S.config.app_profiles.push({app:"",style:"default",paste_key:"ctrl+v"});renderProfiles();loadApps();};
+
+const MIC={good:"✅ Sounds good. The level is healthy.",quiet:"🔈 Quite quiet. Move closer to the microphone or raise the input volume in Windows.",
+  silent:"🔇 Almost nothing recorded. Check that the right microphone is selected and not muted.",
+  clipping:"📢 Too loud (distorting). Lower the input volume or move back a little.",loud:"📢 Very loud. Lower the input volume a little."};
+let wired=false;
+function wireNew(){
+  if(wired) return; wired=true; const c=S.config;
+  $("#hkPreset").onchange=async()=>{ const v=$("#hkPreset").value; if(!v) return;
+    await post("/api/config",{hotkey:v}); $("#hkPreset").value=""; $("#hkMsg").textContent=tr("Saved!"); setTimeout(()=>$("#hkMsg").textContent="",2500); };
+  $("#updFolder").value=c.update_folder||"";
+  $("#updFolderSave").onclick=async()=>{ await post("/api/config",{update_folder:$("#updFolder").value.trim()}); await post("/api/update/check"); };
+  $("#updCheck").onclick=()=>post("/api/update/check");
+  $("#updGo").onclick=()=>{ $("#updGo").disabled=true; post("/api/update/install"); };
+  $("#updResOk").onclick=()=>post("/api/update/dismiss");
+  $("#micTest").onclick=async()=>{
+    const r=await post("/api/mic/test");
+    if(r.error==="recording"){ $("#micVerdict").textContent=tr("Stop recording first."); return; }
+    $("#micVerdict").textContent=tr("Listening…"); $("#micPlay").disabled=true;
+    const t=setInterval(async()=>{ const m=await api("/api/mic/test"); $("#micBar").style.width=Math.min(100,m.level*600)+"%";
+      if(!m.running){ clearInterval(t); $("#micBar").style.width="0";
+        $("#micVerdict").textContent=m.error?m.error:(tr(MIC[m.verdict]||"")+(m.rms_db!=null?`  (${m.rms_db} dB)`:""));
+        $("#micPlay").disabled=!m.has_audio; } },120); };
+  $("#micPlay").onclick=()=>post("/api/mic/play");
+}
 
 /* ---------- history ---------- */
 function fmt(ts){const d=new Date(ts*1000);return d.toLocaleDateString(undefined,{day:"numeric",month:"short"})+" "+d.toLocaleTimeString(undefined,{hour:"2-digit",minute:"2-digit"});}

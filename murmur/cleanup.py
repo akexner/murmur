@@ -36,20 +36,28 @@ def models():
         return []
 
 
-def polish(text: str, model: str, timeout=45) -> str:
+STYLES = {
+    "formal": "Tone: polite, professional and formal (suitable for an email to a client or an authority). ",
+    "friendly": "Tone: warm, friendly and natural, but still correct. ",
+    "concise": "Tone: short and to the point; remove padding but keep every fact. ",
+}
+
+
+def polish(text: str, model: str, timeout=45, style: str = "") -> str:
     """Polish each line separately so the line breaks you dictated are always preserved."""
     if not text.strip() or not model:
         return text
     if "\n" in text:
         parts = re.split(r"(\n+)", text)
-        return "".join(p if (not p.strip() or p.startswith("\n")) else _polish_one(p, model, timeout)
+        return "".join(p if (not p.strip() or p.startswith("\n")) else _polish_one(p, model, timeout, style)
                        for p in parts)
-    return _polish_one(text, model, timeout)
+    return _polish_one(text, model, timeout, style)
 
 
-def _polish_one(text: str, model: str, timeout) -> str:
+def _polish_one(text: str, model: str, timeout, style: str = "") -> str:
     try:
-        out = _call("/api/generate", {"model": model, "prompt": PROMPT + text, "stream": False,
+        prompt = PROMPT.replace("Text:\n", STYLES.get(style, "") + "\n\nText:\n") + text
+        out = _call("/api/generate", {"model": model, "prompt": prompt, "stream": False,
                                       "think": False,
                                       "options": {"temperature": 0, "num_predict": max(256, len(text) * 2)}},
                     timeout=timeout).get("response", "")

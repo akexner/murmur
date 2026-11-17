@@ -19,3 +19,9 @@ New-Item -ItemType Directory -Force "$Work\assets" | Out-Null
 if (Test-Path "$Work\Murmur-Windows.zip") { Remove-Item "$Work\Murmur-Windows.zip" }
 Compress-Archive -Path "$Work\dist\Murmur" -DestinationPath "$Work\Murmur-Windows.zip"
 Write-Host "Done: $Work\Murmur-Windows.zip"
+# Optional: also create the signed USB-stick update package (needs the private key from tools\keygen.py).
+$key = Join-Path $env:USERPROFILE ".murmur-signing\update-private.pem"
+if (Test-Path $key) {
+  $ver = (Select-String -Path "$root\murmur\__init__.py" -Pattern '"(.+)"').Matches[0].Groups[1].Value
+  & $Python "$root\tools\make_update.py" --payload "$Work\dist\Murmur" --version $ver --out $Work
+} else { Write-Host "No signing key found; skipped the .murmurupdate package (run tools\keygen.py once to enable)." }

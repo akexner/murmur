@@ -10,7 +10,9 @@ from urllib.parse import parse_qs, urlparse
 
 import sounddevice as sd
 
-from . import cleanup, models, netguard, paths
+import sys
+
+from . import __version__, cleanup, models, netguard, paths, winutil
 
 
 def make_server(ctl):
@@ -74,7 +76,42 @@ def make_server(ctl):
                     "downloaded": {k: models.is_ready(k) for k in models.MODELS},
                     "attention": c.store.attention_count(), "recovered": c.recovered,
                     "lang": c.lang, "blocked": netguard.blocked, "models_root": models.root(),
+                    "version": __version__, "latched": c.latched,
+                    "update": {"available": c.updates.available, "rejected": c.updates.rejected,
+                               "result": c.updates.result, "busy": c.updates.busy, "error": c.updates.error,
+                               "frozen": bool(getattr(sys, "frozen", False))},
                     "models": models.MODELS})
+            if method == "POST" and p == "/api/update/check":
+                c.updates.check_now()
+                return self._send(200, {"ok": True})
+            if method == "POST" and p == "/api/update/install":
+                c.updates.error = ""
+
+                def go():
+                    try:
+                        c.install_update()
+                    except Exception as e:
+                        c.updates.error = str(e)
+                        c.updates.busy = False
+                threading.Thread(target=go, daemon=True).start()
+                return self._send(200, {"ok": True})
+            if method == "POST" and p == "/api/update/dismiss":
+                c.updates.dismiss_result()
+                return self._send(200, {"ok": True})
+            if method == "POST" and p == "/api/undo":
+                return self._send(200, {"ok": c.undo_last()})
+            if method == "GET" and p == "/api/apps":
+                return self._send(200, winutil.open_apps())
+            if method == "POST" and p == "/api/mic/test":
+                if c.rec.active:
+                    return self._send(200, {"error": "recording"})
+                c.mic.start(c.cfg["mic"])
+                return self._send(200, {"ok": True})
+            if method == "GET" and p == "/api/mic/test":
+                return self._send(200, c.mic.snapshot())
+            if method == "POST" and p == "/api/mic/play":
+                c.mic.play()
+                return self._send(200, {"ok": True})
             if method == "GET" and p == "/api/ollama/models":
                 return self._send(200, cleanup.models())
             if method == "GET" and p == "/api/devices":

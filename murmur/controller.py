@@ -6,8 +6,12 @@ import sys
 import threading
 import time
 
-from . import cleanup, i18n, models, netguard, paster, paths, postprocess, recorder
+import keyboard
+
+from . import (cleanup, glossaries, i18n, models, netguard, paster, paths, postprocess, recorder,
+               updater, winutil)
 from .config import Config
+from .miccheck import MicCheck
 from .hotkeys import HotkeyManager
 from .overlay import Overlay
 from .store import Store
@@ -31,6 +35,14 @@ class Controller:
         self.paused = False
         self.lock = threading.RLock()
         self.show_ui = lambda: None      # set by app
+        self.quit_app = lambda: None     # set by app (clean shutdown, used by the updater)
+        self.notify = lambda title, msg: None   # set by app (tray notification)
+        self.cur_app = (0, "")           # (hwnd, exe) of the window focused when recording started
+        self.last_paste = None           # for "undo last dictation"
+        self.latched = False             # hands-free recording (quick tap)
+        self._press_t = 0.0
+        self._notified_version = ""
+        self.mic = MicCheck()
         models.set_root(self.cfg["models_dir"])
         models.offline = lambda: bool(self.cfg["offline_mode"])
         netguard.install(lambda: bool(self.cfg["offline_mode"]))
@@ -41,6 +53,7 @@ class Controller:
         threading.Thread(target=self._maintenance_loop, daemon=True, name="maint").start()
         if models.is_ready(self.cfg["model"]):
             threading.Thread(target=self._warm_and_resume, daemon=True).start()
+        self.updates = updater.UpdateWatcher(self)
 
     @property
     def lang(self):
@@ -61,19 +74,33 @@ class Controller:
         return "idle"
 
     # ---------- hotkey handlers ----------
+    TAP_SECONDS = 0.35      # a press shorter than this, in "smart" mode, latches hands-free recording
+
     def _on_press(self):
         with self.lock:
             if self.paused:
                 return
-            if self.cfg["mode"] == "toggle" and self.rec.active:
-                self.stop_recording()
-            elif not self.rec.active:
-                self.start_recording()
+            mode = self.cfg["mode"]
+            if self.rec.active:
+                if mode == "toggle" or (mode == "smart" and self.latched):
+                    self.latched = False
+                    self.stop_recording()
+                return
+            self.latched = False
+            self._press_t = time.time()
+            self.start_recording()
 
     def _on_release(self):
-        if self.cfg["mode"] == "hold" and self.rec.active:
-            with self.lock:
-                self.stop_recording()
+        mode = self.cfg["mode"]
+        if mode not in ("hold", "smart"):
+            return
+        with self.lock:
+            if not self.rec.active or self.latched:
+                return
+            if mode == "smart" and time.time() - self._press_t < self.TAP_SECONDS:
+                self.latched = True          # quick tap: keep listening until the next press
+                return
+            self.stop_recording()
 
     def _beep(self, hi):
         if self.cfg["sounds"]:
@@ -85,6 +112,7 @@ class Controller:
             self.overlay.set("error", "Pick a model first", 3)
             self.show_ui()
             return
+        self.cur_app = winutil.foreground()      # which app are we dictating into? (for app styles / undo)
         try:
             rid = self.rec.start(self.cfg["mic"])
         except Exception as e:
@@ -113,14 +141,14 @@ class Controller:
             self.overlay.set("hidden")
             return
         self.store.update(rid, status="pending", path=path, duration=dur)
-        self._enqueue(rid, paste=True)
+        self._enqueue(rid, paste=True, app=self.cur_app)
 
     # ---------- transcription ----------
-    def _enqueue(self, rid, paste):
+    def _enqueue(self, rid, paste, app=(0, "")):
         with self.lock:
             self.busy += 1
         self.overlay.set("thinking")
-        self.jobs.put((rid, paste))
+        self.jobs.put((rid, paste, app))
 
     def retry(self, rid):
         row = self.store.get(rid)
@@ -128,11 +156,19 @@ class Controller:
             self.store.update(rid, status="pending", error="")
             self._enqueue(rid, paste=False)
 
+    def _profile_for(self, exe):
+        exe = (exe or "").lower()
+        for p in self.cfg["app_profiles"]:
+            a = (p.get("app") or "").lower().strip()
+            if a and (a == exe or a in exe):
+                return p
+        return {}
+
     def _worker(self):
         while True:
-            rid, do_paste = self.jobs.get()
+            rid, do_paste, app = self.jobs.get()
             try:
-                self._process(rid, do_paste)
+                self._process(rid, do_paste, app)
             except Exception:
                 log.exception("job crashed")
             finally:
@@ -141,17 +177,30 @@ class Controller:
                     if not self.rec.active and self.busy == 0 and self.overlay.state == "thinking":
                         self.overlay.set("hidden")
 
-    def _process(self, rid, do_paste):
+    def _process(self, rid, do_paste, app=(0, "")):
         row = self.store.get(rid)
         if not row or not row["path"] or not os.path.exists(row["path"]):
             return
         self.store.update(rid, status="transcribing")
         cfg = self.cfg
+        profile = self._profile_for(app[1])
+        style = profile.get("style", "default")
         try:
-            raw, lang = self.tr.transcribe(row["path"], cfg["model"], cfg["language"], cfg["terms"])
+            raw, lang = self.tr.transcribe(row["path"], cfg["model"], cfg["language"],
+                                           glossaries.prompt_terms(cfg))
             final = postprocess.apply(raw, cfg)
-            if final and cfg["llm_cleanup"] and cfg["llm_model"]:
-                final = cleanup.polish(final, cfg["llm_model"])
+            if final and postprocess.is_undo(final):
+                self.store.update(rid, status="done", text="↩ Undo", raw=raw, lang=lang, model=cfg["model"], error="")
+                if do_paste:
+                    self.undo_last()
+                else:
+                    self.overlay.set("done", "Done", 1.2)
+                return
+            final = postprocess.fix_case(final, glossaries.casing_terms(cfg))
+            final, snippet_used = postprocess.expand_snippets(final, cfg["snippets"])
+            wants_llm = cfg["llm_model"] and style != "off" and (cfg["llm_cleanup"] or style in cleanup.STYLES)
+            if final and wants_llm and not snippet_used:        # snippets are inserted exactly as saved
+                final = cleanup.polish(final, cfg["llm_model"], style=style if style in cleanup.STYLES else "")
         except Exception as e:
             log.exception("transcription failed")
             self.store.update(rid, status="failed", error=f"{type(e).__name__}: {e}")
@@ -164,7 +213,9 @@ class Controller:
             return
         if do_paste and cfg["auto_paste"]:
             try:
-                paster.paste(final, cfg["restore_clipboard"], self.hotkeys)
+                hwnd = winutil.foreground()[0]
+                paster.paste(final, cfg["restore_clipboard"], self.hotkeys, profile.get("paste_key") or "ctrl+v")
+                self.last_paste = {"text": final, "hwnd": hwnd, "t": time.time(), "rid": rid}
                 if self.busy <= 1 and not self.rec.active:
                     self.overlay.set("done", "Pasted!", 1.2)
             except Exception as e:
@@ -173,6 +224,63 @@ class Controller:
                 self.overlay.set("error", "Paste failed, see History", 3.5)
         elif self.busy <= 1 and not self.rec.active:
             self.overlay.set("done", "Done", 1.2)
+
+    # ---------- undo last dictation ----------
+    UNDO_WINDOW = 120.0
+
+    def undo_last(self) -> bool:
+        """Delete the text we last pasted, but only when that is provably safe."""
+        lp = self.last_paste
+        why = None
+        if not lp:
+            why = "Nothing to undo"
+        elif time.time() - lp["t"] > self.UNDO_WINDOW:
+            why = "Too late to undo"
+        elif winutil.foreground()[0] != lp["hwnd"]:
+            why = "Window changed, can't undo"
+        elif self.hotkeys.last_typed > lp["t"]:
+            why = "You typed since, can't undo"
+        if why:
+            self.overlay.set("error", why, 2.5)
+            return False
+        self.hotkeys.wait_modifiers_released()
+        for _ in range(min(len(lp["text"]), 5000)):
+            keyboard.send("backspace")
+        self.store.update(lp["rid"], note="Undone")
+        self.last_paste = None
+        self.overlay.set("done", "Undone", 1.2)
+        return True
+
+    # ---------- updates (signed, from USB stick / folder) ----------
+    def on_update_found(self, info):
+        v = info["version"]
+        if v != self._notified_version:
+            self._notified_version = v
+            self.notify("Murmur", self.T("Update {v} found. Open Murmur to install it.").replace("{v}", v))
+        if self.cfg["update_auto"]:
+            threading.Thread(target=self._auto_install, daemon=True).start()
+
+    def _auto_install(self):
+        for _ in range(300):                       # wait up to 5 min for a quiet moment
+            if not self.rec.active and self.busy == 0:
+                break
+            time.sleep(1)
+        else:
+            return
+        try:
+            self.install_update()
+        except Exception:
+            log.exception("auto update failed")
+
+    def install_update(self):
+        self.overlay.set("thinking", "Updating…", 0)
+        try:
+            v = self.updates.install()
+        except Exception:
+            self.overlay.set("hidden")
+            raise
+        log.info("update %s staged; exiting for the installer", v)
+        self.quit_app()
 
     def _warm_and_resume(self):
         self.tr.preload(self.cfg["model"])

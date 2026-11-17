@@ -14,7 +14,8 @@ from .server import make_server
 
 
 def _single_instance():
-    h = ctypes.windll.kernel32.CreateMutexW(None, False, "Local\\MurmurDictationApp")
+    # MURMUR_INSTANCE lets automated tests run a second copy next to a real one; normal use never sets it.
+    h = ctypes.windll.kernel32.CreateMutexW(None, False, "Local\\MurmurDictationApp" + os.environ.get("MURMUR_INSTANCE", ""))
     return ctypes.windll.kernel32.GetLastError() != 183  # ERROR_ALREADY_EXISTS
 
 
@@ -22,8 +23,9 @@ def main():
     logging.basicConfig(filename=paths.log_path(), level=logging.INFO,
                         format="%(asctime)s %(levelname)s %(name)s: %(message)s")
     if not _single_instance():
-        ctypes.windll.user32.MessageBoxW(0, "Murmur is already running. Look for the little bird in your "
-                                            "system tray (bottom right).", "Murmur", 0x40)
+        from . import i18n
+        msg = ("Murmur is already running. Look for the little bird in your system tray (bottom right).")
+        ctypes.windll.user32.MessageBoxW(0, i18n.t(msg, i18n.system_lang()), "Murmur", 0x40)
         return
     background = "--background" in sys.argv
     ctl = Controller()
@@ -63,14 +65,17 @@ def main():
     def open_folder(*_):
         os.startfile(paths.sub("recordings"))
 
-    def quit_app(icon, item):
+    def do_quit():
         if ctl.rec.active:       # never drop a live recording: stop + save it first
             try:
                 ctl.stop_recording()
             except Exception:
                 pass
         quitting.set()
-        icon.stop()
+        try:
+            tray.stop()
+        except Exception:
+            pass
         w = window["w"]
         if w is not None:
             try:
@@ -80,8 +85,24 @@ def main():
         else:
             os._exit(0)
 
+    def quit_app(icon, item):
+        do_quit()
+
+    def install_update(icon, item):
+        try:
+            ctl.install_update()
+        except Exception as e:
+            ctl.notify("Murmur", str(e))
+
+    ctl.quit_app = do_quit
+    ctl.notify = lambda title, msg: tray.notify(msg, title)
+
     tray = pystray.Icon("Murmur", icon_for("idle"), "Murmur", pystray.Menu(
         pystray.MenuItem(lambda i: ctl.T("Open Murmur"), show_ui, default=True),
+        pystray.MenuItem(lambda i: ctl.T("Undo last dictation"), lambda i, m: ctl.undo_last()),
+        pystray.MenuItem(lambda i: ctl.T("Install update {v}").replace(
+            "{v}", (ctl.updates.available or {}).get("version", "")), install_update,
+            visible=lambda i: bool(ctl.updates.available)),
         pystray.MenuItem(lambda i: ctl.T("Pause dictation"), toggle_pause, checked=lambda i: ctl.paused),
         pystray.MenuItem(lambda i: ctl.T("Open recordings folder"), open_folder),
         pystray.Menu.SEPARATOR,

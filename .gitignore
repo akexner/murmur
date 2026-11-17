@@ -5,3 +5,7 @@ build/
 dist/
 *.zip
 website/*.zip
+
+*.pem
+.murmur-signing/
+*.murmurupdate

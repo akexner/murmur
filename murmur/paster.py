@@ -57,15 +57,15 @@ def set_clipboard(text: str) -> bool:
         u32.CloseClipboard()
 
 
-def paste(text: str, restore=True, hotkeys=None):
-    """Put text on the clipboard and press Ctrl+V. The text always stays in history regardless."""
+def paste(text: str, restore=True, hotkeys=None, key="ctrl+v"):
+    """Put text on the clipboard and press the paste key. The text always stays in history regardless."""
     prev = get_clipboard() if restore else None
     if not set_clipboard(text):
         raise RuntimeError("Could not access the clipboard")
     if hotkeys:
         hotkeys.wait_modifiers_released()
     time.sleep(0.05)
-    keyboard.send("ctrl+v")
+    keyboard.send(key or "ctrl+v")
     if restore and prev is not None:
         time.sleep(0.6)
         set_clipboard(prev)

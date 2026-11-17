@@ -6,7 +6,7 @@ from . import paths
 
 DEFAULTS = {
     "hotkey": "ctrl+windows",
-    "mode": "hold",              # "hold" (push-to-talk) or "toggle"
+    "mode": "smart",             # "smart" (hold to talk, quick tap = hands-free), "hold", or "toggle"
     "model": "small",
     "language": "auto",
     "mic": None,                 # sounddevice device index or None for default
@@ -19,7 +19,13 @@ DEFAULTS = {
     "retention_days": 30,        # 0 = keep audio forever. Starred clips are never expired.
     "terms": [],                 # words to bias recognition towards (names, jargon)
     "replacements": [],          # [{"from": "...", "to": "..."}]
-    "llm_cleanup": False,        # optional polish with a local Ollama model (127.0.0.1 only)
+    "glossary_tax": False,       # German tax/accounting vocabulary pack
+    "snippets": [],              # [{"trigger": "...", "text": "..."}]
+    "app_profiles": [],          # [{"app": "outlook.exe", "style": "default|off|formal|friendly|concise", "paste_key": "ctrl+v"}]
+    "update_folder": "",         # extra folder/share scanned for signed updates (USB sticks are always scanned)
+    "last_update": "",           # version installed by the updater (guards against re-install loops)
+    "update_auto": False,       # install a verified update without asking
+    "llm_cleanup": False,       # optional polish with a local Ollama model (127.0.0.1 only)
     "llm_model": "",
     "offline_mode": False,      # Kanzlei mode: refuse every non-local network connection
     "models_dir": "",            # custom model folder (e.g. a network share); "" = default
