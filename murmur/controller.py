@@ -77,6 +77,7 @@ class Controller:
     TAP_SECONDS = 0.35      # a press shorter than this, in "smart" mode, latches hands-free recording
 
     def _on_press(self):
+        log.info("hotkey pressed (mode=%s, recording=%s, paused=%s)", self.cfg["mode"], self.rec.active, self.paused)
         with self.lock:
             if self.paused:
                 return
@@ -109,6 +110,7 @@ class Controller:
 
     def start_recording(self):
         if not models.is_ready(self.cfg["model"]):
+            log.warning("no speech model ready (%s); not recording", self.cfg["model"])
             self.overlay.set("error", "Pick a model first", 3)
             self.show_ui()
             return
@@ -120,6 +122,7 @@ class Controller:
             self.overlay.set("error", "Mic problem", 3)
             return
         self.store.create(rid, self.rec.path, "recording")
+        log.info("recording started (%s)", rid)
         self.overlay.set("listening")
         self._beep(True)
 
@@ -132,6 +135,7 @@ class Controller:
             self.overlay.set("error", "Recording error", 3)
             return
         self._beep(False)
+        log.info("recording stopped (%.1f s)", dur)
         if dur < 0.3:               # an accidental tap, not speech
             try:
                 os.remove(path)

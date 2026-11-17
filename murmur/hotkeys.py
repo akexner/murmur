@@ -28,6 +28,29 @@ def specific(name: str) -> str:
     return {"win": "windows"}.get(n, n)
 
 
+# Real keyboards report key names in the Windows language ("strg", "linke windows", "leertaste" on a German
+# PC). Scan codes are the same everywhere, so keys are recognised by scan code first and by name second.
+_SCAN_MODS = {29: "ctrl", 56: "alt", 42: "shift", 54: "shift", 91: "windows", 92: "windows"}
+_SCAN_KEYS = {57: "space", 28: "enter", 1: "esc", 15: "tab", 58: "caps lock", 14: "backspace",
+              59: "f1", 60: "f2", 61: "f3", 62: "f4", 63: "f5", 64: "f6", 65: "f7", 66: "f8", 67: "f9",
+              68: "f10", 87: "f11", 88: "f12"}
+_RIGHT_WORDS = ("right", "rechte", "rechts", "droite", "derecha", "destra", "rechter")
+
+
+def canonical(name: str, scan_code) -> str:
+    """English, language-independent name of a key event, e.g. 'left ctrl', 'left windows', 'f9'."""
+    n = (name or "").lower().strip()
+    try:
+        sc = abs(int(scan_code))
+    except (TypeError, ValueError):
+        sc = -1
+    base = _SCAN_MODS.get(sc)
+    if base:
+        right = sc in (54, 92) or any(w in n for w in _RIGHT_WORDS)   # "rechte strg", "strg (rechts)", ...
+        return ("right " if right else "left ") + base
+    return _SCAN_KEYS.get(sc) or specific(n)
+
+
 def combo_of(s: str) -> set:
     return {specific(p) for p in s.split("+") if p.strip()}
 
@@ -61,7 +84,7 @@ class HotkeyManager:
 
     # ---- events ----
     def _kb(self, e):
-        self._update(specific(e.name), e.event_type == "down", is_key=True)
+        self._update(canonical(e.name, getattr(e, "scan_code", None)), e.event_type == "down", is_key=True)
 
     def _ms(self, e):
         btn = getattr(e, "button", None)
