@@ -109,7 +109,12 @@ def _removable_roots():
 def candidate_files(extra_folder: str = ""):
     dirs = []
     for r in _removable_roots():
-        dirs += [r, os.path.join(r, "Murmur")]
+        murmur_dir = os.path.join(r, "Murmur")
+        dirs += [r, murmur_dir]
+        try:                                       # also one level of sub-folders, e.g. X:\Murmur\03_UPDATES
+            dirs += [e.path for e in os.scandir(murmur_dir) if e.is_dir()]
+        except OSError:
+            pass
     if extra_folder:
         dirs.append(extra_folder)
     found = []

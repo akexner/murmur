@@ -12,7 +12,7 @@ Speech recognition runs **locally on your PC** with open-source Whisper ([faster
 - Custom dictionary (names, jargon) and replacements; voice commands ("new line", "new paragraph" / "neue Zeile", "neuer Absatz"); filler-word removal
 - **Audio is never lost:** recordings stream to disk while you speak; interrupted ones are recovered on next launch; failed transcriptions keep their audio with a retry button; deleting moves clips to "Recently deleted" for 14 days; starred clips never expire
 - **Offline / office mode:** the app itself refuses every non-local network connection, model downloads are disabled, models are imported from a folder, USB stick or network drive
-- **Optional text polish with a local [Ollama](https://ollama.com) model** (off by default): tidies punctuation and wording, keeps your line breaks, talks only to `127.0.0.1`, and falls back to your original text on any problem
+- **Optional text polish with a local [Ollama](https://ollama.com) model** (off by default): tidies punctuation and wording, keeps your line breaks, talks only to `127.0.0.1`, and falls back to your original text on any problem, including when the model changes a long word (names, tax terms) or a number
 - **Hotkeys:** any key or combination, left/right-specific keys, mouse side buttons. Default mode is *smart*: hold to talk, or tap once for hands-free and tap again to stop
 - **German tax vocabulary pack** (about 130 terms) for recognition and correct spelling; your own dictionary words always come first
 - **Snippets:** say a trigger phrase (or "insert" plus the trigger) and a saved text block is pasted exactly as written

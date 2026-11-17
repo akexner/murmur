@@ -69,4 +69,22 @@ def _polish_one(text: str, model: str, timeout, style: str = "") -> str:
     if not out or len(out) > len(text) * 1.6 + 20 or len(out) < len(text) * 0.4:
         log.warning("ollama cleanup rejected (length %s -> %s)", len(text), len(out))
         return text
+    if not faithful(text, out):
+        log.warning("ollama cleanup rejected (a long word or a number was changed)")
+        return text
     return out
+
+
+def _squash(s: str) -> str:
+    return re.sub(r"[^0-9a-zäöüß]", "", s.lower())
+
+
+def faithful(original: str, polished: str) -> bool:
+    """True only if every long word (names, compound tax terms) and every number of the original is still
+    present in the polished text. Small local models sometimes 'correct' Umsatzsteuervoranmeldung into
+    Umsatzsteuererklärung or change 4711 into 4712; in that case we prefer the original text."""
+    out = _squash(polished)
+    for w in re.findall(r"[A-Za-zÄÖÜäöüß-]{10,}", original):
+        if _squash(w) not in out:
+            return False
+    return all(d in out for d in re.findall(r"\d+", original))
